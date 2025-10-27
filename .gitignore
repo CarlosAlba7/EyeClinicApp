@@ -34,4 +34,4 @@ yarn-error.log*
 Thumbs.db
 
 #md files
-.md
+*.md
