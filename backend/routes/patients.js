@@ -46,6 +46,35 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Patient Signup
+router.post('/signup', async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, password } = req.body;
+
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO patient (
+        firstName, lastName, email, phone, password)
+        VALUES (?, ?, ?, ?, ?)`,
+        [firstName, lastName, email, phone, password]
+    );
+
+    res.status(201).json({
+      message: 'Patient account created successfully',
+      patientID: result.insertID
+    });
+  } catch (error) {
+    console.error('Patient signup error:', error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+    res.status(500).json({ message: 'Server error creating account' });
+  }
+});
+
 // Create new patient
 router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), async (req, res) => {
   try {
