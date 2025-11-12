@@ -3,8 +3,79 @@ const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
-// REPORT 1: Appointment Statistics by Status
+// REPORT 1: Appointment Statistics
 router.get('/appointment-statistics', authenticateToken, async (req, res) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      employeeID,
+      patientID,
+      status,
+      sortBy = 'count',
+      sortOrder = 'DESC'
+    } = req.query;
+
+    // Base query
+    let query = `
+      SELECT
+        appointmentStatus,
+        COUNT(*) AS count,
+        ROUND(COUNT(*) * 100.0 / SELECT COUNT(*) FROM appointment), 2) AS percentage
+      FROM appointment
+      WHERE appointmentStatus IS NOT NULL
+    `;
+
+    const params = [];
+
+    // Apply filters
+    if (startDate && endDate) {
+      query += ` AND appointmentDate BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+
+    if (employeeID) {
+      query += ` AND employeeID = ?`;
+      params.push(employeeID);
+    }
+
+    if (patientID) {
+      query += ` AND patientID = ?`;
+      params.push(patientID);
+    }
+
+    if (status) {
+      query += ` AND appointmentStatus = ?`;
+      params.push(status);
+    }
+
+    query += ` GROUP BY appointmentStatus`;
+
+    // Check if valid sorting
+    const validSortColumns = ['appointmentStatus', 'count', 'percentage'];
+    const validSortOrders = ['ASC', 'DESC'];
+
+    const safeSortBy = validSortColumns.includes(sortBy) ? sortBy : 'count';
+    const safeSortOrder = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
+
+    query += ` ORDER BY ${safeSortBy} ${safeSortOrder}`;
+
+    const [results] = await db.query(query, params);
+
+    res.json({
+      title: 'Appointment Statistics',
+      filters: { startDate, endDate, employeeID, patientID, status },
+      sort: { sortBy: safeSortBy, sortOrder: safeSortOrder },
+      data: results
+    });
+  } catch (error) {
+    console.error('Appointment statistics error:', error);
+    res.status(500).json({ message: 'Server error generating report' });
+  }
+});
+
+// REPORT 1: Appointment Statistics by Status
+/*router.get('/appointment-statistics', authenticateToken, async (req, res) => {
   try {
     const [results] = await db.query(`
       SELECT 
@@ -25,7 +96,7 @@ router.get('/appointment-statistics', authenticateToken, async (req, res) => {
     console.error('Appointment statistics error:', error);
     res.status(500).json({ message: 'Server error generating report' });
   }
-});
+});*/
 
 // REPORT 2: Revenue Report by Month
 router.get('/revenue-by-month', authenticateToken, async (req, res) => {
