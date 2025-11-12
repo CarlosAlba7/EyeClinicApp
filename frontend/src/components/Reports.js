@@ -14,6 +14,13 @@ const Reports = () => {
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
 
+  // Appointment Statictics filters
+  const [sortBy, setSortBy] = useState('count');
+  const [sortOrder, setSortOrder] = useState('DESC');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterEmployee, setFilterEmployee] = useState('');
+  const [filterPatient, setFilterPatient] = useState('');
+
   const showMessage = (type, text) => {
     setMessage({ type, text });
     setTimeout(() => setMessage({ type: '', text: '' }), 3000);
@@ -22,11 +29,20 @@ const Reports = () => {
   const generateReport = async (reportType) => {
     setLoading(true);
     setActiveReport(reportType);
+    setReportData(null);
     try {
       let response;
       switch (reportType) {
         case 'appointmentStats':
-          response = await reportAPI.appointmentStatistics();
+          response = await reportAPI.appointmentStatistics({
+            sortBy,
+            sortOrder,
+            employeeID: filterEmployee,
+            patientID: filterPatient,
+            status: filterStatus,
+            startDate,
+            endDate,
+          });
           break;
         case 'revenue':
           response = await reportAPI.revenueByMonth();
@@ -78,6 +94,19 @@ const Reports = () => {
         return (
           <div className="report-section">
             <h3>{reportData.title}</h3>
+            <p>
+              Filters:
+              {reportData.filters && (
+                <>
+                  {' '}
+                  {reportData.filters.startDate && `From ${reportData.filters.startData}`}
+                  {reportData.filters.endDate && ` to ${reportData.filters.endDate}`}
+                  {reportData.filters.employeeID && ` | Employee ID: ${reportData.filters.employeeID}`}
+                  {reportData.filters.patientID && ` | Patient ID: ${reportData.filters.patientID}`}
+                  {reportData.filters.status && ` | Status: ${reportData.filters.status}`}
+                  </>
+              )}
+            </p>
             <table>
               <thead>
                 <tr>
@@ -367,8 +396,72 @@ const Reports = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
           <div className="card">
             <h4>REPORT 1: Appointment Statistics</h4>
-            <p>View appointment statistics by status</p>
-            <button 
+            <p>View appointment statistics</p>
+            <div className="form-group">
+              <label>Sort By</label>
+              <select
+                className="form-control"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="count">Count</option>
+                <option value="percentage">Percentage</option>
+                <option value="appointmentStatus">Status</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Sort Order</label>
+              <select
+                className="form-control"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              >
+                <option value="DESC">Descending</option>
+                <option value="ASC">Ascending</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Filter by Status</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. 12"
+                value={filterEmployee}
+                onChange={(e) => setFilterEmployee(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Filter by Patient ID (optional)</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. 45"
+                value={filterPatient}
+                onChange={(e) => setFilterPatient(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Date Range (optional)</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <input
+                  type="date"
+                  className="form-control"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <button
               onClick={() => generateReport('appointmentStats')}
               className="btn btn-primary"
               disabled={loading}
