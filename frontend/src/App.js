@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
+import LandingPage from "./components/LandingPage";
+import PatientSignup from "./components/PatientSignup";
 import Login from './components/Login';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -33,8 +35,19 @@ function App() {
     <Router>
       <div className="app">
         {user && <Navigation user={user} setUser={setUser} />}
+
         
         <Routes>
+          <Route 
+            path="/landingpage"
+            element={<LangingPage />}
+          />
+
+          <Route 
+            path="/signup"
+            element={<PatientSignup />}
+          />
+              
           <Route 
             path="/login" 
             element={user ? <Navigate to="/dashboard" /> : <Login setUser={setUser} />} 
@@ -72,7 +85,7 @@ function App() {
           
           <Route 
             path="/" 
-            element={<Navigate to={user ? "/dashboard" : "/login"} />} 
+            element={<Navigate to={user ? "/dashboard" : "/landingpage"} />} 
           />
         </Routes>
       </div>
