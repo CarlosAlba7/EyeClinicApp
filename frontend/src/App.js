@@ -40,7 +40,7 @@ function App() {
         <Routes>
           <Route 
             path="/landingpage"
-            element={<LangingPage />}
+            element={<LandingPage />}
           />
 
           <Route 
