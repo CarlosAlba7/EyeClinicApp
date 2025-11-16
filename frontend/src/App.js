@@ -19,6 +19,8 @@ import Invoices from "./components/Invoices";
 import Reports from "./components/Reports";
 import PatientDashboard from "./components/PatientDashboard";
 
+const getRole = (user) => user?.role || user?.employeeType;
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,13 @@ function App() {
     const storedUser = localStorage.getItem("user");
 
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      let parsed = JSON.parse(storedUser);
+
+      if (!parsed.role && parsed.employeeType) {
+        parsed.role = parsed.employeeType;
+      }
+
+      setUser(parsed);
     }
     setLoading(false);
   }, []);
@@ -37,6 +45,8 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
+  const role = getRole(user);
+  
   return (
     <Router>
       <div className="app">
