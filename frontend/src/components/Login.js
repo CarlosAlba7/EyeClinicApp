@@ -18,6 +18,10 @@ const Login = ({ setUser }) => {
       const response = await authAPI.login({ email, password });
       const { token, user } = response.data;
 
+      if (!user.role && user.employeeType) {
+        user.role = user.employeeType;
+      }
+
       // Store token + user
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
