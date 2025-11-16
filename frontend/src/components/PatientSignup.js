@@ -1,124 +1,142 @@
 import React, { useState } from "react";
-import Patients from "./Patients";
+import "./PatientSignup.css";
+import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
 
 const PatientSignup = () => {
-    const [formData, setFormData] = useState({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        password: ""
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
     });
+  };
 
-    const [message, setMessage] = useState(""); // show feedback to user
-    const [loading, setLoading] = useState(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await authAPI.signup(formData);
+      setMessage("Account created successfully!");
+      setTimeout(() => navigate("/login"), 1500);
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Signup failed.");
+    }
+  };
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  return (
+    <div className="signup-container">
+      <div className="signup-card">
+        <h2>Create Patient Account</h2>
+        <p className="subtitle">
+          Join <strong>EyeClinic</strong> and book appointments with ease.
+        </p>
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setMessage("");
-        setLoading(true);
-        
-        try {
-            const response = await fetch("/api/patients/signup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
-            });
+        {message && <div className="alert">{message}</div>}
 
-            const result = await response.json();
+        <form onSubmit={handleSubmit}>
+          {/* FIRST + LAST NAME ROW */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>First Name</label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                placeholder="John"
+                className="form-control"
+              />
+            </div>
 
-            if (response.ok) {
-                setMessage("Account created successfully!");
-                setFormData({
-                    firstName: "",
-                    lastName: "",
-                    email: "",
-                    phone: "",
-                    password: "",
-                });
-            } else {
-                setMessage(`${result.message || "Error creating account"}`);
-            }
-        } catch (error) {
-            console.error("Signup error:", error);
-            setMessage("Server error. Please try again.");
-        }
+            <div className="form-group">
+              <label>Last Name</label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                placeholder="Doe"
+                className="form-control"
+              />
+            </div>
+          </div>
 
-        setLoading(false);
-    };
+          {/* EMAIL */}
+          <div className="form-group">
+            <label>Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="you@example.com"
+              className="form-control"
+            />
+          </div>
 
-    return (
-        <div className="signup-page">
-            <h2>Sign Up</h2>
-            <form onSubmit={handleSubmit}>
-                <label>
-                    First Name:
-                    <input
-                      type="text"
-                      name="firstName"
-                      onChange={handleChange}
-                      value={formData.firstName}
-                      required
-                    />
-                </label>
+          {/* PHONE */}
+          <div className="form-group">
+            <label>Phone</label>
+            <input
+              type="text"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+              placeholder="123-456-7890"
+              className="form-control"
+            />
+          </div>
 
-                <label>
-                    Last Name:
-                    <input
-                      type="text"
-                      name="lastName"
-                      onChange={handleChange}
-                      value={formData.lastName}
-                      required
-                    />
-                </label>
+          {/* PASSWORD WITH TOGGLE */}
+          <div className="form-group">
+            <label>Password</label>
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter password"
+                className="form-control"
+              />
+              <span
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </span>
+            </div>
+          </div>
 
-                <label>
-                    Email:
-                    <input
-                      type="email"
-                      name="email"
-                      onChange={handleChange}
-                      value={formData.email}
-                      required
-                    />
-                </label>
+          <button className="btn-primary" type="submit">
+            Sign Up
+          </button>
 
-                <label>
-                    Phone:
-                    <input
-                      type="tel"
-                      name="phone"
-                      onChange={handleChange}
-                      value={formData.phone}
-                      required
-                    />
-                </label>
-
-                <label>
-                    Password:
-                    <input
-                      type="password"
-                      name="password"
-                      onChange={handleChange}
-                      value={formData.password}
-                      required
-                    />
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                >
-                    {loading ? "Creating Account..." : "Sign Up"}
-                </button>
-            </form>
-        </div>
-    );
+          <div className="login-link">
+            Already have an account?{" "}
+            <span onClick={() => navigate("/login")}>Login</span>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default PatientSignup;
