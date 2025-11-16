@@ -1,5 +1,3 @@
-CREATE DATABASE  IF NOT EXISTS `eyeclinic` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `eyeclinic`;
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
 -- Host: localhost    Database: eyeclinic
@@ -144,36 +142,6 @@ LOCK TABLES `employee` WRITE;
 INSERT INTO `employee` VALUES (1,'Admin',NULL,'User',NULL,NULL,NULL,'Admin',NULL,NULL,'2024-01-01',NULL,NULL,NULL,'admin@eyeclinic.com',NULL,NULL,NULL,80000.00),(2,'John',NULL,'Doctor',NULL,NULL,NULL,'Doctor','Ophthalmology',NULL,'2024-01-01',NULL,NULL,NULL,'doctor@eyeclinic.com',NULL,NULL,NULL,180000.00),(3,'Jane',NULL,'Receptionist',NULL,NULL,NULL,'Receptionist',NULL,NULL,'2024-01-01',NULL,NULL,NULL,'receptionist@eyeclinic.com',NULL,NULL,NULL,45000.00);
 /*!40000 ALTER TABLE `employee` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `before_employee_update_salary_check` BEFORE UPDATE ON `employee` FOR EACH ROW BEGIN
-    DECLARE avg_doctor_salary DECIMAL(10,2);
-    
-    -- Get average doctor salary
-    SELECT AVG(salary) INTO avg_doctor_salary
-    FROM employee
-    WHERE employeeType = 'Doctor' AND salary IS NOT NULL;
-    
-    -- If updating to Receptionist or updating salary, check constraint
-    IF NEW.employeeType = 'Receptionist' AND NEW.salary IS NOT NULL THEN
-        IF avg_doctor_salary IS NOT NULL AND NEW.salary > avg_doctor_salary THEN
-            SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Receptionist salary cannot exceed average Doctor salary';
-        END IF;
-    END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `employeecontact`
@@ -318,9 +286,12 @@ CREATE TABLE `patient` (
   `visionHistory` text,
   `medHistory` text,
   `insuranceNote` varchar(120) DEFAULT NULL,
+  `userID` int DEFAULT NULL,
   PRIMARY KEY (`patientID`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_patient_user` (`userID`),
+  CONSTRAINT `fk_patient_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -329,7 +300,7 @@ CREATE TABLE `patient` (
 
 LOCK TABLES `patient` WRITE;
 /*!40000 ALTER TABLE `patient` DISABLE KEYS */;
-INSERT INTO `patient` VALUES (1,'Robert','J','Anderson','Male','1965-04-20','111 Main St, Houston, TX 77001',NULL,'robert.anderson@email.com','713-555-1001','emergency@anderson.com','713-555-1002','Nearsighted since childhood, wears glasses','Diabetes Type 2, Hypertension','Blue Cross PPO'),(2,'Jennifer','K','Taylor','Female','1978-08-15','222 Oak Ave, Houston, TX 77002',NULL,'jennifer.taylor@email.com','713-555-1101','emergency@taylor.com','713-555-1102','Farsighted, requires reading glasses','No significant medical history','United Healthcare'),(3,'William','L','Thomas','Male','1992-01-30','333 Pine St, Houston, TX 77003',NULL,'william.thomas@email.com','713-555-1201','emergency@thomas.com','713-555-1202','Perfect vision until recently','Seasonal allergies','Aetna HMO'),(4,'Mary','M','Garcia','Female','1955-11-08','444 Elm Rd, Houston, TX 77004',NULL,'mary.garcia@email.com','713-555-1301','emergency@garcia.com','713-555-1302','Cataracts developing, glaucoma history','Arthritis, High cholesterol','Medicare + Supplemental'),(5,'James','N','Martinez','Male','1988-06-22','555 Maple Dr, Houston, TX 77005',NULL,'james.martinez@email.com','713-555-1401','emergency@martinez.com','713-555-1402','Astigmatism, uses contact lenses','No significant medical history','Cigna'),(6,'Patricia','O','Rodriguez','Female','1970-03-14','666 Cedar Ln, Houston, TX 77006',NULL,'patricia.rodriguez@email.com','713-555-1501','emergency@rodriguez.com','713-555-1502','Presbyopia, bifocals needed','Diabetes Type 1','Humana'),(7,'Christopher','P','Lopez','Male','1985-09-05','777 Birch Way, Houston, TX 77007',NULL,'chris.lopez@email.com','713-555-1601','emergency@lopez.com','713-555-1602','Myopia, recently diagnosed','No significant medical history','Blue Cross HMO'),(8,'Linda','Q','Gonzalez','Female','1960-12-18','888 Spruce Ct, Houston, TX 77008',NULL,'linda.gonzalez@email.com','713-555-1701','emergency@gonzalez.com','713-555-1702','Macular degeneration risk, family history','Hypertension, Osteoporosis','Kaiser Permanente'),(9,'Daniel','R','Wilson','Male','1995-07-28','999 Willow St, Houston, TX 77009',NULL,'daniel.wilson@email.com','713-555-1801','emergency@wilson.com','713-555-1802','Computer vision syndrome','No significant medical history','United Healthcare PPO'),(10,'Barbara','S','Lee','Female','1968-02-11','1010 Ash Ave, Houston, TX 77010',NULL,'barbara.lee@email.com','713-555-1901','emergency@lee.com','713-555-1902','Dry eye syndrome, requires drops','Thyroid disorder','Aetna PPO');
+INSERT INTO `patient` VALUES (1,'Robert','J','Anderson','Male','1965-04-20','111 Main St, Houston, TX 77001',NULL,'robert.anderson@email.com','713-555-1001','emergency@anderson.com','713-555-1002','Nearsighted since childhood, wears glasses','Diabetes Type 2, Hypertension','Blue Cross PPO',NULL),(2,'Jennifer','K','Taylor','Female','1978-08-15','222 Oak Ave, Houston, TX 77002',NULL,'jennifer.taylor@email.com','713-555-1101','emergency@taylor.com','713-555-1102','Farsighted, requires reading glasses','No significant medical history','United Healthcare',NULL),(3,'William','L','Thomas','Male','1992-01-30','333 Pine St, Houston, TX 77003',NULL,'william.thomas@email.com','713-555-1201','emergency@thomas.com','713-555-1202','Perfect vision until recently','Seasonal allergies','Aetna HMO',NULL),(4,'Mary','M','Garcia','Female','1955-11-08','444 Elm Rd, Houston, TX 77004',NULL,'mary.garcia@email.com','713-555-1301','emergency@garcia.com','713-555-1302','Cataracts developing, glaucoma history','Arthritis, High cholesterol','Medicare + Supplemental',NULL),(5,'James','N','Martinez','Male','1988-06-22','555 Maple Dr, Houston, TX 77005',NULL,'james.martinez@email.com','713-555-1401','emergency@martinez.com','713-555-1402','Astigmatism, uses contact lenses','No significant medical history','Cigna',NULL),(6,'Patricia','O','Rodriguez','Female','1970-03-14','666 Cedar Ln, Houston, TX 77006',NULL,'patricia.rodriguez@email.com','713-555-1501','emergency@rodriguez.com','713-555-1502','Presbyopia, bifocals needed','Diabetes Type 1','Humana',NULL),(7,'Christopher','P','Lopez','Male','1985-09-05','777 Birch Way, Houston, TX 77007',NULL,'chris.lopez@email.com','713-555-1601','emergency@lopez.com','713-555-1602','Myopia, recently diagnosed','No significant medical history','Blue Cross HMO',NULL),(8,'Linda','Q','Gonzalez','Female','1960-12-18','888 Spruce Ct, Houston, TX 77008',NULL,'linda.gonzalez@email.com','713-555-1701','emergency@gonzalez.com','713-555-1702','Macular degeneration risk, family history','Hypertension, Osteoporosis','Kaiser Permanente',NULL),(9,'Dan','R','Wilson','Male','1995-07-28','999 Willow St, Houston, TX 77009',NULL,'daniel.wilson@email.com','713-555-1801','emergency@wilson.com','713-555-1802','Computer vision syndrome','No significant medical history','United Healthcare PPO',NULL),(10,'Barbara','S','Lee','Female','1968-02-11','1010 Ash Ave, Houston, TX 77010',NULL,'barbara.lee@email.com','713-555-1901','emergency@lee.com','713-555-1902','Dry eye syndrome, requires drops','Thyroid disorder','Aetna PPO',NULL),(12,'Kevin',NULL,'Pham',NULL,NULL,NULL,NULL,'kvp804@gmail.com','8329985834',NULL,NULL,NULL,NULL,NULL,1),(13,'tan',NULL,'nguyen',NULL,NULL,NULL,NULL,'abc123@gmail.com','1234567890',NULL,NULL,NULL,NULL,NULL,2);
 /*!40000 ALTER TABLE `patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -370,12 +341,32 @@ LOCK TABLES `prescription` WRITE;
 UNLOCK TABLES;
 
 --
--- Dumping events for database 'eyeclinic'
+-- Table structure for table `users`
 --
 
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `userID` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `passwordHash` varchar(255) NOT NULL,
+  `role` enum('Admin','Doctor','Receptionist','Patient') NOT NULL,
+  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`userID`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 --
--- Dumping routines for database 'eyeclinic'
+-- Dumping data for table `users`
 --
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'kvp804@gmail.com','$2a$10$Ou4OFpmE7CgGLDYVZ3TVW./OAFMulEXO5/O8IBDbfzfTFb4MWG8aK','Patient','2025-11-15 16:16:08'),(2,'abc123@gmail.com','$2a$10$0vWGB7FFTdIS.IJ1HCIb0uJ4iXJbtYVcl1olh0ea1cOt6YV9jBZsi','Patient','2025-11-15 19:40:39');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -386,23 +377,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-22 13:22:30
-
--- TRIGGER 2: Prevent invoice total from being negative
-DELIMITER ;;
-CREATE TRIGGER before_invoice_insert_total_check BEFORE INSERT ON invoice FOR EACH ROW 
-BEGIN
-    IF NEW.invoiceTotal < 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Invoice total cannot be negative';
-    END IF;
-END;;
-
-CREATE TRIGGER before_invoice_update_total_check BEFORE UPDATE ON invoice FOR EACH ROW 
-BEGIN
-    IF NEW.invoiceTotal < 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Invoice total cannot be negative';
-    END IF;
-END;;
-DELIMITER ;
+-- Dump completed on 2025-11-15 20:53:09
