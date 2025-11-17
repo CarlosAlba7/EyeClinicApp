@@ -1,174 +1,158 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const db = require('../config/database');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const db = require("../config/database");
+const { authenticateToken, authorizeRoles } = require("../middleware/auth");
 
-// Get all patients (with optional search)
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const { search } = req.query;
-    
-    let query = 'SELECT * FROM patient';
-    let params = [];
+// ---------------------------------------------------------
+// GET ALL PATIENTS (Admin / Staff only)
+// ---------------------------------------------------------
+router.get(
+  "/",
+  authenticateToken,
+  authorizeRoles("Admin", "Receptionist", "Doctor"),
+  async (req, res) => {
+    try {
+      const [rows] = await db.query(
+        `SELECT 
+           p.patientID,
+           p.userID,
+           p.firstName,
+           p.lastName,
+           p.gender,
+           p.email,
+           p.phone,
+           p.patientBirthdate
+         FROM patient p
+         ORDER BY p.patientID DESC`
+      );
 
-    if (search) {
-      query += ' WHERE firstName LIKE ? OR lastName LIKE ? OR email LIKE ? OR phone LIKE ?';
-      const searchPattern = `%${search}%`;
-      params = [searchPattern, searchPattern, searchPattern, searchPattern];
+      res.json(rows);
+    } catch (err) {
+      console.error("Error fetching patients:", err);
+      res.status(500).json({ message: "Server error loading patients" });
     }
-
-    query += ' ORDER BY patientID DESC';
-
-    const [patients] = await db.query(query, params);
-    res.json(patients);
-  } catch (error) {
-    console.error('Get patients error:', error);
-    res.status(500).json({ message: 'Server error fetching patients' });
   }
-});
+);
 
-// Get single patient by ID
-router.get('/:id', authenticateToken, async (req, res) => {
-  try {
-    const [patients] = await db.query(
-      'SELECT * FROM patient WHERE patientID = ?',
-      [req.params.id]
-    );
+// ---------------------------------------------------------
+// GET SINGLE PATIENT BY ID
+// ---------------------------------------------------------
+router.get(
+  "/:id",
+  authenticateToken,
+  authorizeRoles("Admin", "Receptionist", "Doctor"),
+  async (req, res) => {
+    try {
+      const [rows] = await db.query(
+        `SELECT 
+            p.*, 
+            u.email, 
+            u.role
+         FROM patient p
+         JOIN users u ON p.userID = u.userID
+         WHERE p.patientID = ?`,
+        [req.params.id]
+      );
 
-    if (patients.length === 0) {
-      return res.status(404).json({ message: 'Patient not found' });
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      res.json(rows[0]);
+    } catch (err) {
+      console.error("Error fetching patient:", err);
+      res.status(500).json({ message: "Server error" });
     }
-
-    res.json(patients[0]);
-  } catch (error) {
-    console.error('Get patient error:', error);
-    res.status(500).json({ message: 'Server error fetching patient' });
   }
-});
+);
 
-// Patient Signup
-router.post('/signup', async (req, res) => {
-  try {
-    const { firstName, lastName, email, phone, password } = req.body;
+// ---------------------------------------------------------
+// UPDATE PATIENT (Admin / Staff)
+// ---------------------------------------------------------
+router.put(
+  "/:id",
+  authenticateToken,
+  authorizeRoles("Admin", "Receptionist"),
+  async (req, res) => {
+    try {
+      const patientID = req.params.id;
+      const { firstName, lastName, gender, email, phone, patientBirthdate } =
+        req.body;
 
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      // Ensure patient exists
+      const [existing] = await db.query(
+        "SELECT userID FROM patient WHERE patientID = ?",
+        [patientID]
+      );
+
+      if (existing.length === 0) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      const userID = existing[0].userID;
+
+      // Update patient table
+      await db.query(
+        `UPDATE patient SET 
+           firstName=?, 
+           lastName=?, 
+           gender=?,
+           email=?, 
+           phone=?, 
+           patientBirthdate=?
+         WHERE patientID=?`,
+        [firstName, lastName, gender, email, phone, patientBirthdate, patientID]
+      );
+
+      // Update users table email
+      await db.query(`UPDATE users SET email=? WHERE userID=?`, [
+        email,
+        userID,
+      ]);
+
+      res.json({ message: "Patient updated successfully" });
+    } catch (err) {
+      console.error("Error updating patient:", err);
+      res.status(500).json({ message: "Server error updating patient" });
     }
-
-    const [result] = await db.query(
-      `INSERT INTO patient (
-        firstName, lastName, email, phone, password)
-        VALUES (?, ?, ?, ?, ?)`,
-        [firstName, lastName, email, phone, password]
-    );
-
-    res.status(201).json({
-      message: 'Patient account created successfully',
-      patientID: result.insertID
-    });
-  } catch (error) {
-    console.error('Patient signup error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Email already exists' });
-    }
-    res.status(500).json({ message: 'Server error creating account' });
   }
-});
+);
 
-// Create new patient
-router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), async (req, res) => {
-  try {
-    const {
-      firstName, middleInit, lastName, gender, patientBirthdate,
-      patientAddress, patientContact, email, phone,
-      emergencyEmail, emergencyPhone, visionHistory,
-      medHistory, insuranceNote
-    } = req.body;
+// ---------------------------------------------------------
+// DELETE PATIENT (Admin only) — removes both user + patient
+// ---------------------------------------------------------
+router.delete(
+  "/:id",
+  authenticateToken,
+  authorizeRoles("Admin"),
+  async (req, res) => {
+    try {
+      const patientID = req.params.id;
 
-    const [result] = await db.query(
-      `INSERT INTO patient (
-        firstName, middleInit, lastName, gender, patientBirthdate,
-        patientAddress, patientContact, email, phone,
-        emergencyEmail, emergencyPhone, visionHistory,
-        medHistory, insuranceNote
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        firstName, middleInit, lastName, gender, patientBirthdate,
-        patientAddress, patientContact, email, phone,
-        emergencyEmail, emergencyPhone, visionHistory,
-        medHistory, insuranceNote
-      ]
-    );
+      // Get userID for deletion
+      const [rows] = await db.query(
+        "SELECT userID FROM patient WHERE patientID = ?",
+        [patientID]
+      );
 
-    res.status(201).json({
-      message: 'Patient created successfully',
-      patientID: result.insertId
-    });
-  } catch (error) {
-    console.error('Create patient error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Email already exists' });
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      const userID = rows[0].userID;
+
+      // Delete patient profile
+      await db.query("DELETE FROM patient WHERE patientID = ?", [patientID]);
+
+      // Delete login account
+      await db.query("DELETE FROM users WHERE userID = ?", [userID]);
+
+      res.json({ message: "Patient deleted successfully" });
+    } catch (err) {
+      console.error("Error deleting patient:", err);
+      res.status(500).json({ message: "Server error deleting patient" });
     }
-    res.status(500).json({ message: 'Server error creating patient' });
   }
-});
-
-// Update patient
-router.put('/:id', authenticateToken, authorizeRoles('Admin', 'Receptionist'), async (req, res) => {
-  try {
-    const {
-      firstName, middleInit, lastName, gender, patientBirthdate,
-      patientAddress, patientContact, email, phone,
-      emergencyEmail, emergencyPhone, visionHistory,
-      medHistory, insuranceNote
-    } = req.body;
-
-    const [result] = await db.query(
-      `UPDATE patient SET
-        firstName = ?, middleInit = ?, lastName = ?, gender = ?,
-        patientBirthdate = ?, patientAddress = ?, patientContact = ?,
-        email = ?, phone = ?, emergencyEmail = ?, emergencyPhone = ?,
-        visionHistory = ?, medHistory = ?, insuranceNote = ?
-      WHERE patientID = ?`,
-      [
-        firstName, middleInit, lastName, gender, patientBirthdate,
-        patientAddress, patientContact, email, phone,
-        emergencyEmail, emergencyPhone, visionHistory,
-        medHistory, insuranceNote, req.params.id
-      ]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Patient not found' });
-    }
-
-    res.json({ message: 'Patient updated successfully' });
-  } catch (error) {
-    console.error('Update patient error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ message: 'Email already exists' });
-    }
-    res.status(500).json({ message: 'Server error updating patient' });
-  }
-});
-
-// Delete patient
-router.delete('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
-  try {
-    const [result] = await db.query(
-      'DELETE FROM patient WHERE patientID = ?',
-      [req.params.id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Patient not found' });
-    }
-
-    res.json({ message: 'Patient deleted successfully' });
-  } catch (error) {
-    console.error('Delete patient error:', error);
-    res.status(500).json({ message: 'Server error deleting patient' });
-  }
-});
+);
 
 module.exports = router;
