@@ -1,47 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { patientAPI } from '../services/api';
+import React, { useState, useEffect, useCallback } from "react";
+
+import { patientAPI } from "../services/api";
 
 const Patients = ({ user }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [message, setMessage] = useState({ type: "", text: "" });
   const [formData, setFormData] = useState({
-    firstName: '',
-    middleInit: '',
-    lastName: '',
-    gender: '',
-    patientBirthdate: '',
-    patientAddress: '',
-    email: '',
-    phone: '',
-    emergencyEmail: '',
-    emergencyPhone: '',
-    visionHistory: '',
-    medHistory: '',
-    insuranceNote: '',
+    firstName: "",
+    middleInit: "",
+    lastName: "",
+    gender: "",
+    patientBirthdate: "",
+    patientAddress: "",
+    email: "",
+    phone: "",
+    emergencyEmail: "",
+    emergencyPhone: "",
+    visionHistory: "",
+    medHistory: "",
+    insuranceNote: "",
   });
 
-  useEffect(() => {
-    fetchPatients();
-  }, [search]);
+  // ✅ FIX 1: permission based on user.role (new auth)
+  const canModify = user?.role === "Admin" || user?.role === "Receptionist";
 
-  const fetchPatients = async () => {
+  // ✅ FIX 2: define fetchPatients BEFORE useEffect (no ESLint warning)
+  const fetchPatients = useCallback(async () => {
     try {
       const response = await patientAPI.getAll({ search });
       setPatients(response.data);
     } catch (error) {
-      showMessage('error', 'Failed to fetch patients');
+      showMessage("error", "Failed to fetch patients");
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  // Load patients whenever search changes
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   };
 
   const handleInputChange = (e) => {
@@ -54,66 +60,70 @@ const Patients = ({ user }) => {
     try {
       if (editingPatient) {
         await patientAPI.update(editingPatient.patientID, formData);
-        showMessage('success', 'Patient updated successfully');
+        showMessage("success", "Patient updated successfully");
       } else {
         await patientAPI.create(formData);
-        showMessage('success', 'Patient created successfully');
+        showMessage("success", "Patient created successfully");
       }
       setShowModal(false);
       resetForm();
+      setLoading(true);
       fetchPatients();
     } catch (error) {
-      showMessage('error', error.response?.data?.message || 'Operation failed');
+      showMessage("error", error.response?.data?.message || "Operation failed");
     }
   };
 
   const handleEdit = (patient) => {
     setEditingPatient(patient);
     setFormData({
-      firstName: patient.firstName || '',
-      middleInit: patient.middleInit || '',
-      lastName: patient.lastName || '',
-      gender: patient.gender || '',
-      patientBirthdate: patient.patientBirthdate?.split('T')[0] || '',
-      patientAddress: patient.patientAddress || '',
-      email: patient.email || '',
-      phone: patient.phone || '',
-      emergencyEmail: patient.emergencyEmail || '',
-      emergencyPhone: patient.emergencyPhone || '',
-      visionHistory: patient.visionHistory || '',
-      medHistory: patient.medHistory || '',
-      insuranceNote: patient.insuranceNote || '',
+      firstName: patient.firstName || "",
+      middleInit: patient.middleInit || "",
+      lastName: patient.lastName || "",
+      gender: patient.gender || "",
+      patientBirthdate: patient.patientBirthdate?.split("T")[0] || "",
+      patientAddress: patient.patientAddress || "",
+      email: patient.email || "",
+      phone: patient.phone || "",
+      emergencyEmail: patient.emergencyEmail || "",
+      emergencyPhone: patient.emergencyPhone || "",
+      visionHistory: patient.visionHistory || "",
+      medHistory: patient.medHistory || "",
+      insuranceNote: patient.insuranceNote || "",
     });
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this patient?')) {
-      try {
-        await patientAPI.delete(id);
-        showMessage('success', 'Patient deleted successfully');
-        fetchPatients();
-      } catch (error) {
-        showMessage('error', 'Failed to delete patient');
-      }
+    if (!window.confirm("Are you sure you want to delete this patient?")) {
+      return;
+    }
+
+    try {
+      await patientAPI.delete(id);
+      showMessage("success", "Patient deleted successfully");
+      setLoading(true);
+      fetchPatients();
+    } catch (error) {
+      showMessage("error", "Failed to delete patient");
     }
   };
 
   const resetForm = () => {
     setFormData({
-      firstName: '',
-      middleInit: '',
-      lastName: '',
-      gender: '',
-      patientBirthdate: '',
-      patientAddress: '',
-      email: '',
-      phone: '',
-      emergencyEmail: '',
-      emergencyPhone: '',
-      visionHistory: '',
-      medHistory: '',
-      insuranceNote: '',
+      firstName: "",
+      middleInit: "",
+      lastName: "",
+      gender: "",
+      patientBirthdate: "",
+      patientAddress: "",
+      email: "",
+      phone: "",
+      emergencyEmail: "",
+      emergencyPhone: "",
+      visionHistory: "",
+      medHistory: "",
+      insuranceNote: "",
     });
     setEditingPatient(null);
   };
@@ -122,8 +132,6 @@ const Patients = ({ user }) => {
     resetForm();
     setShowModal(true);
   };
-
-  const canModify = user.employeeType === 'Admin' || user.employeeType === 'Receptionist';
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -169,11 +177,13 @@ const Patients = ({ user }) => {
             {patients.map((patient) => (
               <tr key={patient.patientID}>
                 <td>{patient.patientID}</td>
-                <td>{patient.firstName} {patient.middleInit} {patient.lastName}</td>
+                <td>
+                  {patient.firstName} {patient.middleInit} {patient.lastName}
+                </td>
                 <td>{patient.gender}</td>
                 <td>{patient.email}</td>
                 <td>{patient.phone}</td>
-                <td>{patient.patientBirthdate?.split('T')[0]}</td>
+                <td>{patient.patientBirthdate?.split("T")[0]}</td>
                 {canModify && (
                   <td>
                     <div className="table-actions">
@@ -183,7 +193,7 @@ const Patients = ({ user }) => {
                       >
                         Edit
                       </button>
-                      {user.employeeType === 'Admin' && (
+                      {user?.role === "Admin" && (
                         <button
                           onClick={() => handleDelete(patient.patientID)}
                           className="btn btn-sm btn-danger"
@@ -204,8 +214,10 @@ const Patients = ({ user }) => {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{editingPatient ? 'Edit Patient' : 'Add New Patient'}</h2>
-              <button onClick={() => setShowModal(false)} className="btn-close">×</button>
+              <h2>{editingPatient ? "Edit Patient" : "Add New Patient"}</h2>
+              <button onClick={() => setShowModal(false)} className="btn-close">
+                ×
+              </button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -344,9 +356,9 @@ const Patients = ({ user }) => {
                   onChange={handleInputChange}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ display: "flex", gap: "1rem" }}>
                 <button type="submit" className="btn btn-primary">
-                  {editingPatient ? 'Update' : 'Create'}
+                  {editingPatient ? "Update" : "Create"}
                 </button>
                 <button
                   type="button"
