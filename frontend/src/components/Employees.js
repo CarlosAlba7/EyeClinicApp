@@ -133,8 +133,10 @@ const Employees = ({ user }) => {
     setShowModal(true);
   };
 
+  const userRole = (user?.employeeType || user?.role || "");
+
   if (loading) return <div className="loading">Loading...</div>;
-  if (user.employeeType !== 'Admin') {
+  if (userRole !== 'Admin') {
     return (
       <div className="container">
         <div className="alert alert-error">You do not have permission to view this page.</div>
