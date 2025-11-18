@@ -198,10 +198,23 @@ router.post("/patient-signup", async (req, res) => {
     const userID = userResult.insertId;
 
     const [patientResult] = await connection.query(
-      `INSERT INTO patient (userID, firstName, lastName, email, phone)
-       VALUES (?, ?, ?, ?, ?)`,
-      [userID, firstName, lastName, email, phone]
-    );
+      `INSERT INTO patient (
+          userID, firstName, middleInit, lastName, gender,
+          patientBirthdate, patientAddress, email, phone
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userID,
+        firstName,
+        middleInit,
+        lastName,
+        gender,
+        patientBirthdate,
+        patientAddress,
+        email,
+        phone
+      ]
+);
+
 
     await connection.commit();
     connection.release();
