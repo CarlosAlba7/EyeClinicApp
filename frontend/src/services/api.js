@@ -57,12 +57,10 @@ export const patientAPI = {
 };
 // Patient Portal API
 export const patientPortalAPI = {
-  // Patient profile (name, email, etc.)
-  getProfile: () => api.get("/patient/me"),
-
-  // All appointments for the logged-in patient
+  getProfile: () => api.get("/auth/me"),
   getMyAppointments: () => api.get("/patient-appointments/my"),
 };
+
 
 // Employee API
 export const employeeAPI = {
