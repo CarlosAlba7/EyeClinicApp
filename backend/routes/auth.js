@@ -116,15 +116,32 @@ router.get("/me", async (req, res) => {
 
     if (decoded.role === "Patient") {
       const [rows] = await db.query(
-        `SELECT p.patientID AS userID, p.firstName, p.lastName, u.email, u.role
+        `SELECT 
+            p.patientID,
+            p.userID,
+            p.firstName,
+            p.middleInit,
+            p.lastName,
+            p.gender,
+            p.patientBirthdate,
+            p.patientAddress,
+            p.email,
+            p.phone,
+            p.emergencyEmail,
+            p.emergencyPhone,
+            p.visionHistory,
+            p.medHistory,
+            p.insuranceNote,
+            u.email AS userEmail,
+            u.role
          FROM patient p
          JOIN users u ON p.userID = u.userID
          WHERE p.userID = ?`,
         [decoded.userID]
       );
+    return res.json(rows[0]);
+  }
 
-      return res.json(rows[0]);
-    }
 
     // Employee
     const [rows] = await db.query(
