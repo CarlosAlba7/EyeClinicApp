@@ -65,6 +65,79 @@ router.get(
     }
   }
 );
+// ---------------------------------------------------------
+// CREATE NEW PATIENT (Admin / Receptionist)
+// ---------------------------------------------------------
+router.post(
+  "/",
+  authenticateToken,
+  authorizeRoles("Admin", "Receptionist"),
+  async (req, res) => {
+    try {
+      const {
+        firstName,
+        middleInit,
+        lastName,
+        gender,
+        patientBirthdate,
+        patientAddress,
+        email,
+        phone,
+        emergencyEmail,
+        emergencyPhone,
+        visionHistory,
+        medHistory,
+        insuranceNote,
+      } = req.body;
+
+      // Check required fields
+      if (!firstName || !lastName || !email || !gender) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Create login account in users table
+      const [userResult] = await db.query(
+        `INSERT INTO users (email, passwordHash, role)
+         VALUES (?, ?, 'Patient')`,
+        [email, ""] // <-- optional: no password for manually-created patient
+      );
+
+      const userID = userResult.insertId;
+
+      // Insert into patient table
+      await db.query(
+        `INSERT INTO patient (
+          userID, firstName, middleInit, lastName, gender,
+          patientBirthdate, patientAddress, email, phone,
+          emergencyEmail, emergencyPhone, visionHistory,
+          medHistory, insuranceNote
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userID,
+          firstName,
+          middleInit,
+          lastName,
+          gender,
+          patientBirthdate,
+          patientAddress,
+          email,
+          phone,
+          emergencyEmail,
+          emergencyPhone,
+          visionHistory,
+          medHistory,
+          insuranceNote,
+        ]
+      );
+
+      res.status(201).json({ message: "Patient created successfully" });
+    } catch (err) {
+      console.error("Error creating patient:", err);
+      res.status(500).json({ message: "Server error creating patient" });
+    }
+  }
+);
 
 // ---------------------------------------------------------
 // UPDATE PATIENT (Admin / Staff)
