@@ -1,7 +1,7 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-const Navigation = ({ user, setUser }) => {
+const Navigation = ({ setUser }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -11,29 +11,11 @@ const Navigation = ({ user, setUser }) => {
     navigate('/login');
   };
 
-  const userRole = (user?.employeeType || user?.role || "");
-
   return (
     <nav className="navbar">
-      <Link to="/dashboard" className="navbar-brand">
-        Eye Clinic System
-      </Link>
-      <div className="navbar-menu">
-        <Link to="/dashboard">Dashboard</Link>
-        <Link to="/patients">Patients</Link>
-        <Link to="/appointments">Appointments</Link>
-        {(userRole === 'Admin' || userRole === 'Receptionist') && (
-          <Link to="/invoices">Invoices</Link>
-        )}
-        {userRole === 'Admin' && (
-          <Link to="/employees">Employees</Link>
-        )}
-        <Link to="/reports">Reports</Link>
-      </div>
+      <span className="navbar-brand">Eye Clinic System</span>
+
       <div className="navbar-user">
-        <span>
-          {user?.firstName} {user?.lastName} ({user?.employeeType})
-        </span>
         <button onClick={handleLogout} className="btn-logout">
           Logout
         </button>
@@ -43,3 +25,4 @@ const Navigation = ({ user, setUser }) => {
 };
 
 export default Navigation;
+
