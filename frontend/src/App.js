@@ -18,6 +18,10 @@ import Employees from "./components/Employees";
 import Invoices from "./components/Invoices";
 import Reports from "./components/Reports";
 import PatientDashboard from "./components/PatientDashboard";
+import BookAppointment from "./components/BookAppointment";
+import MyAppointments from "./components/MyAppointments";
+import ViewDoctors from "./components/ViewDoctors";
+import PatientProfile from "./components/PatientProfile";
 
 const getRole = (user) => user?.role || user?.employeeType;
 
@@ -97,7 +101,52 @@ function App() {
             }
           />
 
-          {/* Admin Features */}
+          {/* Patient Portal Routes */}
+          <Route
+            path="/book"
+            element={
+              user && user.role === "Patient" ? (
+                <BookAppointment user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          <Route
+            path="/patient-appointments"
+            element={
+              user && user.role === "Patient" ? (
+                <MyAppointments user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          <Route
+            path="/view-doctors"
+            element={
+              user && user.role === "Patient" ? (
+                <ViewDoctors user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          <Route
+            path="/patient-profile"
+            element={
+              user && user.role === "Patient" ? (
+                <PatientProfile user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          {/* Admin/Staff Features */}
           <Route
             path="/patients"
             element={user ? <Patients user={user} /> : <Navigate to="/login" />}

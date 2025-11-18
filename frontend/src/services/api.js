@@ -56,11 +56,12 @@ export const patientAPI = {
   delete: (id) => api.delete(`/patients/${id}`),
 };
 // Patient Portal API
+// Patient Portal API
 export const patientPortalAPI = {
+  // General info about the logged-in user (employee or patient)
   getProfile: () => api.get("/auth/me"),
   getMyAppointments: () => api.get("/patient-appointments/my"),
 };
-
 
 // Employee API
 export const employeeAPI = {

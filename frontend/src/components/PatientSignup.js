@@ -8,10 +8,14 @@ const PatientSignup = () => {
 
   const [formData, setFormData] = useState({
     firstName: "",
+    middleInit: "",
     lastName: "",
     email: "",
     phone: "",
     password: "",
+    gender: "",
+    patientBirthdate: "",
+    patientAddress: "",
   });
 
   const [message, setMessage] = useState("");
@@ -46,10 +50,10 @@ const PatientSignup = () => {
         {message && <div className="alert">{message}</div>}
 
         <form onSubmit={handleSubmit}>
-          {/* FIRST + LAST NAME ROW */}
+          {/* FIRST + MIDDLE + LAST NAME ROW */}
           <div className="form-row">
             <div className="form-group">
-              <label>First Name</label>
+              <label>First Name *</label>
               <input
                 type="text"
                 name="firstName"
@@ -61,8 +65,21 @@ const PatientSignup = () => {
               />
             </div>
 
+            <div className="form-group" style={{ maxWidth: '80px' }}>
+              <label>MI</label>
+              <input
+                type="text"
+                name="middleInit"
+                value={formData.middleInit}
+                onChange={handleChange}
+                maxLength="1"
+                placeholder="A"
+                className="form-control"
+              />
+            </div>
+
             <div className="form-group">
-              <label>Last Name</label>
+              <label>Last Name *</label>
               <input
                 type="text"
                 name="lastName"
@@ -77,7 +94,7 @@ const PatientSignup = () => {
 
           {/* EMAIL */}
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Email Address *</label>
             <input
               type="email"
               name="email"
@@ -91,9 +108,9 @@ const PatientSignup = () => {
 
           {/* PHONE */}
           <div className="form-group">
-            <label>Phone</label>
+            <label>Phone *</label>
             <input
-              type="text"
+              type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
@@ -103,9 +120,53 @@ const PatientSignup = () => {
             />
           </div>
 
+          {/* GENDER + BIRTHDATE ROW */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Gender *</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                required
+                className="form-control"
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Date of Birth *</label>
+              <input
+                type="date"
+                name="patientBirthdate"
+                value={formData.patientBirthdate}
+                onChange={handleChange}
+                required
+                className="form-control"
+              />
+            </div>
+          </div>
+
+          {/* ADDRESS */}
+          <div className="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              name="patientAddress"
+              value={formData.patientAddress}
+              onChange={handleChange}
+              placeholder="123 Main St, City, State"
+              className="form-control"
+            />
+          </div>
+
           {/* PASSWORD WITH TOGGLE */}
           <div className="form-group">
-            <label>Password</label>
+            <label>Password *</label>
             <div className="password-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
