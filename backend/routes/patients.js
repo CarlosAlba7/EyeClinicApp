@@ -155,14 +155,12 @@ router.post(
 router.put(
   "/:id",
   authenticateToken,
-  authorizeRoles("Admin", "Receptionist"),
+  authorizeRoles("Admin", "Receptionist", "Patient"),
   async (req, res) => {
     try {
       const patientID = req.params.id;
-      const { firstName, lastName, gender, email, phone, patientBirthdate } =
-        req.body;
 
-      // Ensure patient exists
+      // Check if patient exists
       const [existing] = await db.query(
         "SELECT userID FROM patient WHERE patientID = ?",
         [patientID]
@@ -172,34 +170,53 @@ router.put(
         return res.status(404).json({ message: "Patient not found" });
       }
 
-      const userID = existing[0].userID;
+      // Security: Patients can only edit themselves
+      if (req.user.role === "Patient" && existing[0].userID !== req.user.userID) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
 
-      // Update patient table
+      const {
+        firstName,
+        middleInit,
+        lastName,
+        email,
+        phone,
+        patientAddress
+      } = req.body;
+
       await db.query(
         `UPDATE patient SET 
            firstName=?, 
+           middleInit=?, 
            lastName=?, 
-           gender=?,
            email=?, 
            phone=?, 
-           patientBirthdate=?
+           patientAddress=?
          WHERE patientID=?`,
-        [firstName, lastName, gender, email, phone, patientBirthdate, patientID]
+        [
+          firstName,
+          middleInit,
+          lastName,
+          email,
+          phone,
+          patientAddress,
+          patientID
+        ]
       );
 
-      // Update users table email
-      await db.query(`UPDATE users SET email=? WHERE userID=?`, [
+      await db.query("UPDATE users SET email=? WHERE userID=?", [
         email,
-        userID,
+        existing[0].userID
       ]);
 
-      res.json({ message: "Patient updated successfully" });
+      res.json({ message: "Profile updated successfully!" });
     } catch (err) {
       console.error("Error updating patient:", err);
-      res.status(500).json({ message: "Server error updating patient" });
+      res.status(500).json({ message: "Server error updating profile" });
     }
   }
 );
+
 
 // ---------------------------------------------------------
 // DELETE PATIENT (Admin only) — removes both user + patient
