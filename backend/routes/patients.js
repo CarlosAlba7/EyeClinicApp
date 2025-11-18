@@ -12,6 +12,8 @@ router.get(
   authorizeRoles("Admin", "Receptionist", "Doctor"),
   async (req, res) => {
     try {
+      const search = req.query.search ? `%${req.query.search}%` : "%";
+
       const [rows] = await db.query(
         `SELECT 
            p.patientID,
@@ -23,7 +25,14 @@ router.get(
            p.phone,
            p.patientBirthdate
          FROM patient p
-         ORDER BY p.patientID DESC`
+         WHERE 
+           p.firstName LIKE ? OR
+           p.lastName LIKE ? OR
+           CONCAT(p.firstName, ' ', p.lastName) LIKE ? OR
+           p.email LIKE ? OR
+           p.phone LIKE ?
+         ORDER BY p.patientID DESC`,
+        [search, search, search, search, search]
       );
 
       res.json(rows);
@@ -33,6 +42,7 @@ router.get(
     }
   }
 );
+
 
 // ---------------------------------------------------------
 // GET SINGLE PATIENT BY ID
