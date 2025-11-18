@@ -16,6 +16,12 @@ const Dashboard = ({ user }) => {
   });
   const [loading, setLoading] = useState(true);
 
+  /*const getUserRole = (user) => {
+    return (user.employee || user.role || "").toLowerCase();
+  };*/
+  const userRole = (user?.employeeType || user?.role || "").toLowerCase();
+  // console.log("Computed userRole:", userRole);
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -95,7 +101,7 @@ const Dashboard = ({ user }) => {
           <p>Today's Appointments</p>
         </div>
 
-        {user.employeeType === "Admin" && (
+        {userRole === "admin" && (
           <div
             className="dashboard-card"
             style={{
@@ -107,8 +113,8 @@ const Dashboard = ({ user }) => {
           </div>
         )}
 
-        {(user.employeeType === "Admin" ||
-          user.employeeType === "Receptionist") && (
+        {(userRole === "admin" ||
+          userRole === "receptionist") && (
           <div
             className="dashboard-card"
             style={{
@@ -130,8 +136,8 @@ const Dashboard = ({ user }) => {
           <a href="/appointments" className="btn btn-success">
             Manage Appointments
           </a>
-          {(user.employeeType === "Admin" ||
-            user.employeeType === "Receptionist") && (
+          {(userRole === "admin" ||
+            userRole === "receptionist") && (
             <a href="/invoices" className="btn btn-warning">
               View Invoices
             </a>
