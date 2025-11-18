@@ -169,13 +169,25 @@ router.get("/me", async (req, res) => {
 // PATIENT SIGNUP
 // --------------------------
 router.post("/patient-signup", async (req, res) => {
-  const { firstName, lastName, email, phone, password } = req.body;
+  const {
+    firstName,
+    middleInit,
+    lastName,
+    email,
+    phone,
+    password,
+    gender,
+    patientBirthdate,
+    patientAddress
+  } = req.body;
 
   try {
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ message: "Missing fields." });
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password || !gender || !patientBirthdate) {
+      return res.status(400).json({ message: "Missing required fields." });
     }
 
+    // Check if email exists
     const [existingUser] = await db.query(
       "SELECT userID FROM users WHERE email = ?",
       [email]
@@ -189,6 +201,7 @@ router.post("/patient-signup", async (req, res) => {
     const connection = await db.getConnection();
     await connection.beginTransaction();
 
+    // Insert into users table
     const [userResult] = await connection.query(
       `INSERT INTO users (email, passwordHash, role)
        VALUES (?, ?, 'Patient')`,
@@ -197,6 +210,7 @@ router.post("/patient-signup", async (req, res) => {
 
     const userID = userResult.insertId;
 
+    // Insert into patient table
     const [patientResult] = await connection.query(
       `INSERT INTO patient (
           userID, firstName, middleInit, lastName, gender,
@@ -205,16 +219,15 @@ router.post("/patient-signup", async (req, res) => {
       [
         userID,
         firstName,
-        middleInit,
+        middleInit || null,
         lastName,
         gender,
         patientBirthdate,
-        patientAddress,
+        patientAddress || null,
         email,
         phone
       ]
-);
-
+    );
 
     await connection.commit();
     connection.release();
@@ -224,11 +237,13 @@ router.post("/patient-signup", async (req, res) => {
       userID,
       patientID: patientResult.insertId,
     });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error during signup." });
   }
 });
+
 // PATIENT LOGIN
 router.post("/patient-login", async (req, res) => {
   const { email, password } = req.body;
