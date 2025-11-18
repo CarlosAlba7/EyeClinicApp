@@ -129,9 +129,11 @@ const Invoices = ({ user }) => {
     setShowModal(true);
   };
 
+  const userRole = (user?.employeeType || user?.role || "");
+
   if (loading) return <div className="loading">Loading...</div>;
-  
-  const canAccess = user.employeeType === 'Admin' || user.employeeType === 'Receptionist';
+
+  const canAccess = userRole === 'Admin' || userRole === 'Receptionist';
   if (!canAccess) {
     return (
       <div className="container">
@@ -211,7 +213,7 @@ const Invoices = ({ user }) => {
                     >
                       Edit
                     </button>
-                    {user.employeeType === 'Admin' && (
+                    {userRole === 'Admin' && (
                       <button
                         onClick={() => handleDelete(invoice.invoiceID)}
                         className="btn btn-sm btn-danger"
