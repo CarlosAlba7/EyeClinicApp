@@ -1,25 +1,62 @@
-import React, { useState } from 'react';
-import { reportAPI } from '../services/api';
+import { useState, useEffect } from 'react';
+import { reportAPI, shopAPI, employeeAPI, patientAPI } from '../services/api';
 
 const Reports = () => {
+  const [selectedReport, setSelectedReport] = useState('');
   const [activeReport, setActiveReport] = useState('');
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  
+
+  // Dropdown data
+  const [shopItems, setShopItems] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [patients, setPatients] = useState([]);
+
   // Query parameters
-  const [condition, setCondition] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [month, setMonth] = useState('');
-  const [year, setYear] = useState('');
+  const [sortOrder] = useState('DESC');
 
-  // Appointment Statictics filters
-  const [sortBy, setSortBy] = useState('count');
-  const [sortOrder, setSortOrder] = useState('DESC');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterEmployee, setFilterEmployee] = useState('');
-  const [filterPatient, setFilterPatient] = useState('');
+  // Shop Sales Report filters
+  const [shopCategory, setShopCategory] = useState('');
+  const [shopItemID, setShopItemID] = useState('');
+  const [shopOrderStatus, setShopOrderStatus] = useState('');
+  const [shopSortBy, setShopSortBy] = useState('revenue');
+
+  // Doctor Activity Report filters
+  const [doctorID, setDoctorID] = useState('');
+  const [doctorApptType, setDoctorApptType] = useState('');
+  const [doctorApptStatus, setDoctorApptStatus] = useState('');
+  const [ageGroup, setAgeGroup] = useState('');
+  const [hasSpecialistReferral, setHasSpecialistReferral] = useState('');
+
+  // Patient Appointment History filters
+  const [patientID, setPatientID] = useState('');
+  const [patientApptStatus, setPatientApptStatus] = useState('');
+  const [patientApptType, setPatientApptType] = useState('');
+  const [patientDoctorID, setPatientDoctorID] = useState('');
+
+  // Fetch dropdown data on component mount
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        const [itemsRes, employeesRes, patientsRes] = await Promise.all([
+          shopAPI.getAllItems(),
+          employeeAPI.getAll(),
+          patientAPI.getAll()
+        ]);
+
+        setShopItems(itemsRes.data || []);
+        setDoctors((employeesRes.data || []).filter(emp => emp.employeeType === 'Doctor'));
+        setPatients(patientsRes.data || []);
+      } catch (error) {
+        console.error('Error fetching dropdown data:', error);
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -33,47 +70,38 @@ const Reports = () => {
     try {
       let response;
       switch (reportType) {
-        case 'appointmentStats':
-          response = await reportAPI.appointmentStatistics({
-            sortBy,
-            sortOrder,
-            employeeID: filterEmployee,
-            patientID: filterPatient,
-            status: filterStatus,
+        case 'shopSales':
+          response = await reportAPI.shopSales({
             startDate,
             endDate,
+            category: shopCategory,
+            itemID: shopItemID,
+            orderStatus: shopOrderStatus,
+            sortBy: shopSortBy,
+            sortOrder
           });
           break;
-        case 'revenue':
-          response = await reportAPI.revenueByMonth();
+        case 'doctorActivity':
+          response = await reportAPI.doctorActivity({
+            employeeID: doctorID,
+            appointmentType: doctorApptType,
+            appointmentStatus: doctorApptStatus,
+            startDate,
+            endDate,
+            ageGroup,
+            hasSpecialistReferral
+          });
           break;
-        case 'employeePerformance':
-          response = await reportAPI.employeePerformance();
-          break;
-        case 'patientDemographics':
-          response = await reportAPI.patientDemographics();
-          break;
-        case 'patientsByCondition':
-          if (!condition) {
-            showMessage('error', 'Please enter a medical condition');
-            setLoading(false);
-            return;
-          }
-          response = await reportAPI.patientsByCondition(condition);
-          break;
-        case 'appointmentsByDate':
-          if (!startDate || !endDate) {
-            showMessage('error', 'Please select both start and end dates');
-            setLoading(false);
-            return;
-          }
-          response = await reportAPI.appointmentsByDateRange(startDate, endDate);
-          break;
-        case 'outstandingInvoices':
-          response = await reportAPI.outstandingInvoices();
-          break;
-        case 'doctorWorkload':
-          response = await reportAPI.doctorWorkload(month, year);
+        case 'patientAppointmentHistory':
+          response = await reportAPI.patientAppointmentHistory({
+            patientID,
+            appointmentStatus: patientApptStatus,
+            startDate,
+            endDate,
+            employeeID: patientDoctorID,
+            appointmentType: patientApptType,
+            hasSpecialistReferral
+          });
           break;
         default:
           break;
@@ -90,179 +118,50 @@ const Reports = () => {
     if (!reportData) return null;
 
     switch (activeReport) {
-      case 'appointmentStats':
+      case 'shopSales':
         return (
           <div className="report-section">
             <h3>{reportData.title}</h3>
-            <p>
-              Filters:
-              {reportData.filters && (
-                <>
-                  {' '}
-                  {reportData.filters.startDate && `From ${reportData.filters.startData}`}
-                  {reportData.filters.endDate && ` to ${reportData.filters.endDate}`}
-                  {reportData.filters.employeeID && ` | Employee ID: ${reportData.filters.employeeID}`}
-                  {reportData.filters.patientID && ` | Patient ID: ${reportData.filters.patientID}`}
-                  {reportData.filters.status && ` | Status: ${reportData.filters.status}`}
-                  </>
-              )}
-            </p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Count</th>
-                  <th>Percentage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.appointmentStatus}</td>
-                    <td>{row.count}</td>
-                    <td>{row.percentage}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'revenue':
-        return (
-          <div className="report-section">
-            <h3>{reportData.title}</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Invoice Count</th>
-                  <th>Total Revenue</th>
-                  <th>Average Invoice</th>
-                  <th>Paid Amount</th>
-                  <th>Pending Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.month}</td>
-                    <td>{row.invoiceCount}</td>
-                    <td>${parseFloat(row.totalRevenue || 0).toFixed(2)}</td>
-                    <td>${parseFloat(row.averageInvoice || 0).toFixed(2)}</td>
-                    <td>${parseFloat(row.paidAmount || 0).toFixed(2)}</td>
-                    <td>${parseFloat(row.pendingAmount || 0).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'employeePerformance':
-        return (
-          <div className="report-section">
-            <h3>{reportData.title}</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee Name</th>
-                  <th>Type</th>
-                  <th>Specialization</th>
-                  <th>Total Appointments</th>
-                  <th>Completed</th>
-                  <th>Completion Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.employeeName}</td>
-                    <td>{row.employeeType}</td>
-                    <td>{row.specialization || '-'}</td>
-                    <td>{row.totalAppointments}</td>
-                    <td>{row.completedAppointments}</td>
-                    <td>{row.completionRate}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'patientDemographics':
-        return (
-          <div className="report-section">
-            <h3>{reportData.title}</h3>
-            <div className="stats-grid">
-              <div>
-                <h4>Gender Distribution</h4>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Gender</th>
-                      <th>Count</th>
-                      <th>Percentage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.genderDistribution.map((row, idx) => (
-                      <tr key={idx}>
-                        <td>{row.gender}</td>
-                        <td>{row.count}</td>
-                        <td>{row.percentage}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="stat-card">
+                <h4>{reportData.totals.totalOrders}</h4>
+                <p>Total Orders</p>
               </div>
-              <div>
-                <h4>Age Distribution</h4>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Age Group</th>
-                      <th>Count</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.ageDistribution.map((row, idx) => (
-                      <tr key={idx}>
-                        <td>{row.ageGroup}</td>
-                        <td>{row.count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="stat-card">
+                <h4>{reportData.totals.totalQuantity}</h4>
+                <p>Items Sold</p>
+              </div>
+              <div className="stat-card">
+                <h4>${parseFloat(reportData.totals.totalRevenue || 0).toFixed(2)}</h4>
+                <p>Total Revenue</p>
               </div>
             </div>
-          </div>
-        );
-
-      case 'patientsByCondition':
-        return (
-          <div className="report-section">
-            <h3>{reportData.query}</h3>
-            <p><strong>Condition:</strong> {reportData.condition}</p>
-            <p><strong>Total Patients Found:</strong> {reportData.count}</p>
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Patient Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Medical History</th>
+                  <th>Item ID</th>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Orders</th>
+                  <th>Quantity Sold</th>
+                  <th>Revenue</th>
+                  <th>Avg Price</th>
+                  <th>First Sale</th>
+                  <th>Last Sale</th>
                 </tr>
               </thead>
               <tbody>
                 {reportData.data.map((row, idx) => (
                   <tr key={idx}>
-                    <td>{row.patientID}</td>
-                    <td>{row.patientName}</td>
-                    <td>{row.email}</td>
-                    <td>{row.phone}</td>
-                    <td>{row.medHistory}</td>
+                    <td>{row.itemID}</td>
+                    <td>{row.itemName}</td>
+                    <td>{row.category}</td>
+                    <td>{row.totalOrders || 0}</td>
+                    <td>{row.totalQuantitySold || 0}</td>
+                    <td>${parseFloat(row.totalRevenue || 0).toFixed(2)}</td>
+                    <td>${parseFloat(row.averagePrice || 0).toFixed(2)}</td>
+                    <td>{row.firstSale ? new Date(row.firstSale).toLocaleDateString() : 'N/A'}</td>
+                    <td>{row.lastSale ? new Date(row.lastSale).toLocaleDateString() : 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -270,108 +169,127 @@ const Reports = () => {
           </div>
         );
 
-      case 'appointmentsByDate':
+      case 'doctorActivity':
         return (
           <div className="report-section">
-            <h3>{reportData.query}</h3>
-            <p><strong>Date Range:</strong> {reportData.startDate} to {reportData.endDate}</p>
-            <p><strong>Total Appointments:</strong> {reportData.count}</p>
+            <h3>{reportData.title}</h3>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="stat-card">
+                <h4>{reportData.summary.totalAppointments}</h4>
+                <p>Total Appointments</p>
+              </div>
+              <div className="stat-card">
+                <h4>{reportData.summary.specialistReferrals}</h4>
+                <p>Specialist Referrals</p>
+              </div>
+              <div className="stat-card">
+                <h4>
+                  {Object.entries(reportData.summary.byType).map(([type, count]) => (
+                    <span key={type} style={{ display: 'block', fontSize: '0.9rem' }}>
+                      {type}: {count}
+                    </span>
+                  ))}
+                </h4>
+                <p>By Type</p>
+              </div>
+            </div>
             <table>
               <thead>
                 <tr>
-                  <th>Appt ID</th>
+                  <th>Doctor</th>
+                  <th>Patient</th>
+                  <th>Age</th>
                   <th>Date</th>
                   <th>Time</th>
-                  <th>Patient</th>
-                  <th>Doctor</th>
+                  <th>Type</th>
                   <th>Status</th>
                   <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.apptID}</td>
-                    <td>{row.appointmentDate.split('T')[0]}</td>
-                    <td>{row.appointmentTime}</td>
-                    <td>{row.patientName}</td>
-                    <td>{row.doctorName || '-'}</td>
-                    <td>{row.appointmentStatus}</td>
-                    <td>{row.reason}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'outstandingInvoices':
-        return (
-          <div className="report-section">
-            <h3>{reportData.query}</h3>
-            <div className="stat-card">
-              <h4>${reportData.totalOutstanding}</h4>
-              <p>Total Outstanding Amount</p>
-            </div>
-            <p><strong>Total Outstanding Invoices:</strong> {reportData.count}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Invoice ID</th>
-                  <th>Patient</th>
-                  <th>Date Issued</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Days Outstanding</th>
-                  <th>Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td>{row.invoiceID}</td>
-                    <td>{row.patientName}</td>
-                    <td>{row.dateIssued.split('T')[0]}</td>
-                    <td>${parseFloat(row.invoiceTotal).toFixed(2)}</td>
-                    <td>{row.invoiceStatus}</td>
-                    <td>{row.daysOutstanding}</td>
-                    <td>{row.patientPhone}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'doctorWorkload':
-        return (
-          <div className="report-section">
-            <h3>{reportData.query}</h3>
-            <p><strong>Period:</strong> {reportData.period}</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Doctor Name</th>
-                  <th>Specialization</th>
-                  <th>Total Appointments</th>
-                  <th>Scheduled</th>
-                  <th>Completed</th>
-                  <th>Cancelled</th>
+                  <th>Specialist?</th>
+                  <th>Summary</th>
                 </tr>
               </thead>
               <tbody>
                 {reportData.data.map((row, idx) => (
                   <tr key={idx}>
                     <td>{row.doctorName}</td>
-                    <td>{row.specialization || '-'}</td>
-                    <td>{row.appointmentCount}</td>
-                    <td>{row.scheduledCount}</td>
-                    <td>{row.completedCount}</td>
-                    <td>{row.cancelledCount}</td>
+                    <td>{row.patientName}</td>
+                    <td>{row.patientAge}</td>
+                    <td>{new Date(row.appointmentDate).toLocaleDateString()}</td>
+                    <td>{row.appointmentTime}</td>
+                    <td>{row.appointmentType}</td>
+                    <td>{row.appointmentStatus}</td>
+                    <td>{row.reason}</td>
+                    <td>{row.needsSpecialist ? `Yes (${row.specialistType})` : 'No'}</td>
+                    <td>{row.appointmentSummary || '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        );
+
+      case 'patientAppointmentHistory':
+        return (
+          <div className="report-section">
+            <h3>{reportData.title}</h3>
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="stat-card">
+                <h4>{reportData.summary.totalPatients}</h4>
+                <p>Total Patients</p>
+              </div>
+              <div className="stat-card">
+                <h4>{reportData.summary.totalAppointments}</h4>
+                <p>Total Appointments</p>
+              </div>
+              <div className="stat-card">
+                <h4>{reportData.summary.avgAppointmentsPerPatient}</h4>
+                <p>Avg Appts/Patient</p>
+              </div>
+            </div>
+            {reportData.data.map((patient, idx) => (
+              <div key={idx} style={{ marginBottom: '2rem', border: '1px solid #ddd', padding: '1rem', borderRadius: '4px' }}>
+                <h4>{patient.patientName} (ID: {patient.patientID})</h4>
+                <p>
+                  <strong>Age:</strong> {patient.age} |
+                  <strong> Gender:</strong> {patient.gender || 'N/A'} |
+                  <strong> Email:</strong> {patient.patientEmail} |
+                  <strong> Phone:</strong> {patient.patientPhone}
+                </p>
+                <p><strong>Total Appointments:</strong> {patient.appointments.length}</p>
+                {patient.appointments.length > 0 ? (
+                  <table style={{ width: '100%', marginTop: '0.5rem' }}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Doctor</th>
+                        <th>Reason</th>
+                        <th>Summary</th>
+                        <th>Specialist Referral</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {patient.appointments.map((appt, apptIdx) => (
+                        <tr key={apptIdx}>
+                          <td>{new Date(appt.appointmentDate).toLocaleDateString()}</td>
+                          <td>{appt.appointmentTime}</td>
+                          <td>{appt.appointmentType}</td>
+                          <td>{appt.appointmentStatus}</td>
+                          <td>{appt.doctorName || 'N/A'}</td>
+                          <td>{appt.reason}</td>
+                          <td>{appt.appointmentSummary || '-'}</td>
+                          <td>{appt.needsSpecialist ? `${appt.specialistType}` : 'No'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No appointments found</p>
+                )}
+              </div>
+            ))}
           </div>
         );
 
@@ -383,231 +301,378 @@ const Reports = () => {
   return (
     <div className="container">
       <div className="page-header">
-        <h1>Reports & Data Queries</h1>
+        <h1>Admin Reports</h1>
       </div>
 
       {message.text && (
         <div className={`alert alert-${message.type}`}>{message.text}</div>
       )}
 
+      {/* Report Selection Buttons */}
       <div className="card">
-        <div className="card-header">Available Reports</div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div className="card">
-            <h4>REPORT 1: Appointment Statistics</h4>
-            <p>View appointment statistics</p>
-            <div className="form-group">
-              <label>Sort By</label>
-              <select
-                className="form-control"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="count">Count</option>
-                <option value="percentage">Percentage</option>
-                <option value="appointmentStatus">Status</option>
-              </select>
+        <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', padding: '2rem' }}>
+          <button
+            onClick={() => {
+              setSelectedReport('shopSales');
+              setReportData(null);
+            }}
+            className={`btn ${selectedReport === 'shopSales' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              flex: 1,
+              maxWidth: '350px',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              border: selectedReport === 'shopSales' ? '3px solid #007bff' : '2px solid #6c757d',
+              borderRadius: '12px',
+              boxShadow: selectedReport === 'shopSales' ? '0 6px 20px rgba(0,123,255,0.3)' : '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              transform: selectedReport === 'shopSales' ? 'translateY(-4px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>🛒</div>
+            <div>Shop Sales Report</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.85, textAlign: 'center' }}>
+              Analyze merchandise sales, revenue, and order trends
             </div>
-
-            <div className="form-group">
-              <label>Sort Order</label>
-              <select
-                className="form-control"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="DESC">Descending</option>
-                <option value="ASC">Ascending</option>
-              </select>
+          </button>
+          <button
+            onClick={() => {
+              setSelectedReport('doctorActivity');
+              setReportData(null);
+            }}
+            className={`btn ${selectedReport === 'doctorActivity' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              flex: 1,
+              maxWidth: '350px',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              border: selectedReport === 'doctorActivity' ? '3px solid #007bff' : '2px solid #6c757d',
+              borderRadius: '12px',
+              boxShadow: selectedReport === 'doctorActivity' ? '0 6px 20px rgba(0,123,255,0.3)' : '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              transform: selectedReport === 'doctorActivity' ? 'translateY(-4px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>👨‍⚕️</div>
+            <div>Doctor Activity Report</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.85, textAlign: 'center' }}>
+              Track appointments, patient demographics, and referrals
             </div>
-            <div className="form-group">
-              <label>Filter by Status</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. 12"
-                value={filterEmployee}
-                onChange={(e) => setFilterEmployee(e.target.value)}
-              />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedReport('patientAppointmentHistory');
+              setReportData(null);
+            }}
+            className={`btn ${selectedReport === 'patientAppointmentHistory' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{
+              flex: 1,
+              maxWidth: '350px',
+              padding: '1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              border: selectedReport === 'patientAppointmentHistory' ? '3px solid #007bff' : '2px solid #6c757d',
+              borderRadius: '12px',
+              boxShadow: selectedReport === 'patientAppointmentHistory' ? '0 6px 20px rgba(0,123,255,0.3)' : '0 4px 12px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              transform: selectedReport === 'patientAppointmentHistory' ? 'translateY(-4px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>📋</div>
+            <div>Patient Appointment History</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 'normal', opacity: 0.85, textAlign: 'center' }}>
+              Complete patient records with appointment details
             </div>
-
-            <div className="form-group">
-              <label>Filter by Patient ID (optional)</label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. 45"
-                value={filterPatient}
-                onChange={(e) => setFilterPatient(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Date Range (optional)</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-                <input
-                  type="date"
-                  className="form-control"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => generateReport('appointmentStats')}
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              Generate Report
-            </button>
-          </div>
-
-          <div className="card">
-            <h4>REPORT 2: Revenue by Month</h4>
-            <p>Monthly revenue analysis with payment breakdown</p>
-            <button 
-              onClick={() => generateReport('revenue')}
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              Generate Report
-            </button>
-          </div>
-
-          <div className="card">
-            <h4>REPORT 3: Employee Performance</h4>
-            <p>Staff performance metrics and completion rates</p>
-            <button 
-              onClick={() => generateReport('employeePerformance')}
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              Generate Report
-            </button>
-          </div>
-
-          <div className="card">
-            <h4>REPORT 4: Patient Demographics</h4>
-            <p>Patient demographics by gender and age group</p>
-            <button 
-              onClick={() => generateReport('patientDemographics')}
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              Generate Report
-            </button>
-          </div>
+          </button>
         </div>
+      </div>
 
-        <div className="card-header">Data Queries</div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-          <div className="card">
-            <h4>QUERY 1: Patients by Condition</h4>
-            <p>Find patients with specific medical conditions</p>
-            <div className="form-group">
-              <input 
-                type="text" 
-                className="form-control"
-                placeholder="Enter condition (e.g., Diabetes)"
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-              />
-            </div>
-            <button 
-              onClick={() => generateReport('patientsByCondition')}
-              className="btn btn-success"
-              disabled={loading}
+      {/* Filters Section - Conditional Rendering */}
+      {selectedReport === 'shopSales' && (
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <div className="card-header">Shop Sales Report Filters</div>
+          <div className="form-group">
+            <label>Category</label>
+            <select
+              className="form-control"
+              value={shopCategory}
+              onChange={(e) => setShopCategory(e.target.value)}
             >
-              Search
-            </button>
+              <option value="">All Categories</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Contact Care">Contact Care</option>
+              <option value="Accessories">Accessories</option>
+            </select>
           </div>
-
-          <div className="card">
-            <h4>QUERY 2: Appointments by Date Range</h4>
-            <p>View appointments within a date range</p>
-            <div className="form-group">
-              <label>Start Date</label>
-              <input 
-                type="date" 
+          <div className="form-group">
+            <label>Item</label>
+            <select
+              className="form-control"
+              value={shopItemID}
+              onChange={(e) => setShopItemID(e.target.value)}
+            >
+              <option value="">All Items</option>
+              {shopItems.map((item) => (
+                <option key={item.itemID} value={item.itemID}>
+                  {item.itemName} (ID: {item.itemID})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Order Status</label>
+            <select
+              className="form-control"
+              value={shopOrderStatus}
+              onChange={(e) => setShopOrderStatus(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Date Range</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="date"
                 className="form-control"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 className="form-control"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
-            <button 
-              onClick={() => generateReport('appointmentsByDate')}
-              className="btn btn-success"
-              disabled={loading}
-            >
-              Search
-            </button>
           </div>
-
-          <div className="card">
-            <h4>QUERY 3: Outstanding Invoices</h4>
-            <p>List of pending and overdue invoices</p>
-            <button 
-              onClick={() => generateReport('outstandingInvoices')}
-              className="btn btn-success"
-              disabled={loading}
+          <div className="form-group">
+            <label>Sort By</label>
+            <select
+              className="form-control"
+              value={shopSortBy}
+              onChange={(e) => setShopSortBy(e.target.value)}
             >
-              View Outstanding
-            </button>
+              <option value="revenue">Revenue</option>
+              <option value="quantity">Quantity Sold</option>
+              <option value="orders">Number of Orders</option>
+              <option value="itemName">Item Name</option>
+              <option value="category">Category</option>
+            </select>
           </div>
-
-          <div className="card">
-            <h4>QUERY 4: Doctor Workload</h4>
-            <p>Analyze doctor appointment workload</p>
-            <div className="form-group">
-              <label>Month (optional)</label>
-              <input 
-                type="number" 
-                className="form-control"
-                placeholder="1-12"
-                min="1"
-                max="12"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label>Year (optional)</label>
-              <input 
-                type="number" 
-                className="form-control"
-                placeholder="2024"
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-              />
-            </div>
-            <button 
-              onClick={() => generateReport('doctorWorkload')}
-              className="btn btn-success"
-              disabled={loading}
-            >
-              Analyze
-            </button>
-          </div>
+          <button
+            onClick={() => generateReport('shopSales')}
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            Generate Report
+          </button>
         </div>
-      </div>
+      )}
+
+      {selectedReport === 'doctorActivity' && (
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <div className="card-header">Doctor Activity Report Filters</div>
+          <div className="form-group">
+            <label>Doctor</label>
+            <select
+              className="form-control"
+              value={doctorID}
+              onChange={(e) => setDoctorID(e.target.value)}
+            >
+              <option value="">All Doctors</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.employeeID} value={doctor.employeeID}>
+                  Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization || 'General'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Appointment Type</label>
+            <select
+              className="form-control"
+              value={doctorApptType}
+              onChange={(e) => setDoctorApptType(e.target.value)}
+            >
+              <option value="">All Types</option>
+              <option value="Normal">Normal</option>
+              <option value="Checkup">Checkup</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Appointment Status</label>
+            <select
+              className="form-control"
+              value={doctorApptStatus}
+              onChange={(e) => setDoctorApptStatus(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="Scheduled">Scheduled</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Patient Age Group</label>
+            <select
+              className="form-control"
+              value={ageGroup}
+              onChange={(e) => setAgeGroup(e.target.value)}
+            >
+              <option value="">All Ages</option>
+              <option value="Under 18">Under 18</option>
+              <option value="18-30">18-30</option>
+              <option value="31-50">31-50</option>
+              <option value="51-70">51-70</option>
+              <option value="Over 70">Over 70</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Specialist Referral</label>
+            <select
+              className="form-control"
+              value={hasSpecialistReferral}
+              onChange={(e) => setHasSpecialistReferral(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Date Range</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="date"
+                className="form-control"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <input
+                type="date"
+                className="form-control"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <button
+            onClick={() => generateReport('doctorActivity')}
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            Generate Report
+          </button>
+        </div>
+      )}
+
+      {selectedReport === 'patientAppointmentHistory' && (
+        <div className="card" style={{ marginTop: '1rem' }}>
+          <div className="card-header">Patient Appointment History Filters</div>
+          <div className="form-group">
+            <label>Patient</label>
+            <select
+              className="form-control"
+              value={patientID}
+              onChange={(e) => setPatientID(e.target.value)}
+            >
+              <option value="">All Patients</option>
+              {patients.map((patient) => (
+                <option key={patient.patientID} value={patient.patientID}>
+                  {patient.firstName} {patient.lastName} - {patient.email}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Appointment Status</label>
+            <select
+              className="form-control"
+              value={patientApptStatus}
+              onChange={(e) => setPatientApptStatus(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="Scheduled">Scheduled</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Appointment Type</label>
+            <select
+              className="form-control"
+              value={patientApptType}
+              onChange={(e) => setPatientApptType(e.target.value)}
+            >
+              <option value="">All Types</option>
+              <option value="Normal">Normal</option>
+              <option value="Checkup">Checkup</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Doctor</label>
+            <select
+              className="form-control"
+              value={patientDoctorID}
+              onChange={(e) => setPatientDoctorID(e.target.value)}
+            >
+              <option value="">All Doctors</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.employeeID} value={doctor.employeeID}>
+                  Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization || 'General'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Date Range</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="date"
+                className="form-control"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <input
+                type="date"
+                className="form-control"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <button
+            onClick={() => generateReport('patientAppointmentHistory')}
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            Generate Report
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div className="loading">Generating report...</div>

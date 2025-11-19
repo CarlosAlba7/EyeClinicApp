@@ -94,7 +94,7 @@ export const invoiceAPI = {
 
 // Reports API
 export const reportAPI = {
-  appointmentStatistics: () => api.get("/reports/appointment-statistics"),
+  appointmentStatistics: (params) => api.get("/reports/appointment-statistics", { params }),
   revenueByMonth: () => api.get("/reports/revenue-by-month"),
   employeePerformance: () => api.get("/reports/employee-performance"),
   patientDemographics: () => api.get("/reports/patient-demographics"),
@@ -107,6 +107,9 @@ export const reportAPI = {
   outstandingInvoices: () => api.get("/reports/outstanding-invoices"),
   doctorWorkload: (month, year) =>
     api.get("/reports/doctor-workload", { params: { month, year } }),
+  shopSales: (params) => api.get("/reports/shop-sales", { params }),
+  doctorActivity: (params) => api.get("/reports/doctor-activity", { params }),
+  patientAppointmentHistory: (params) => api.get("/reports/patient-appointment-history", { params }),
 };
 
 // Shop API
