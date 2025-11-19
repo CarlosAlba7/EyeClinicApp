@@ -139,6 +139,9 @@ const Dashboard = ({ user }) => {
           <a href="/reports" className="btn btn-secondary">
             Generate Reports
           </a>
+          <a href="/shop" className="btn btn-primary">
+            Shop
+          </a>
         </div>
       </div>
     </div>

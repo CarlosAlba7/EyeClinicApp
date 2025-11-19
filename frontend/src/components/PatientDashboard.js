@@ -126,6 +126,7 @@ export default function PatientDashboard() {
           <button onClick={() => navigate("/book")}>📅 Book Appointment</button>
           <button onClick={() => navigate("/patient-appointments")}>📖 My Appointments</button>
           <button onClick={() => navigate("/view-doctors")}>👨‍⚕️ View Doctors</button>
+          <button onClick={() => navigate("/shop")}>🛒 Shop</button>
           <button onClick={() => navigate("/patient-profile")}>✏️ Edit Profile</button>
         </div>
       </section>

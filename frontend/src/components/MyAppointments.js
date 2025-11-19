@@ -10,6 +10,8 @@ const MyAppointments = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,6 +55,11 @@ const MyAppointments = () => {
     } catch (error) {
       showMessage('error', 'Failed to cancel appointment');
     }
+  };
+
+  const handleViewDetails = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowDetailsModal(true);
   };
 
   const getStatusColor = (status) => {
@@ -141,6 +148,14 @@ const MyAppointments = () => {
                       </span>
                     </td>
                     <td>
+                      {appt.appointmentStatus === 'Completed' && (
+                        <button
+                          onClick={() => handleViewDetails(appt)}
+                          className="btn btn-sm btn-primary"
+                        >
+                          View Details
+                        </button>
+                      )}
                       {appt.appointmentStatus === 'Scheduled' && (
                         <button
                           onClick={() => handleCancel(appt.apptID)}
@@ -155,6 +170,125 @@ const MyAppointments = () => {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showDetailsModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Appointment Details</h2>
+              <button onClick={() => setShowDetailsModal(false)} className="btn-close">×</button>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '1rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem'
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#2c3e50' }}>
+                  Appointment Information
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '0.75rem' }}>
+                  <strong>Date:</strong>
+                  <span>{new Date(selectedAppointment.appointmentDate).toLocaleDateString()}</span>
+
+                  <strong>Time:</strong>
+                  <span>{selectedAppointment.appointmentTime}</span>
+
+                  <strong>Doctor:</strong>
+                  <span>{selectedAppointment.doctorName || 'Not Assigned'}</span>
+
+                  <strong>Reason:</strong>
+                  <span>{selectedAppointment.reason || '-'}</span>
+
+                  <strong>Status:</strong>
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '4px',
+                    backgroundColor: '#d4edda',
+                    color: '#155724',
+                    fontWeight: '500',
+                    display: 'inline-block'
+                  }}>
+                    {selectedAppointment.appointmentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {selectedAppointment.doctorNotes && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#2c3e50' }}>
+                    Doctor's Notes
+                  </h3>
+                  <div style={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    lineHeight: '1.6'
+                  }}>
+                    {selectedAppointment.doctorNotes}
+                  </div>
+                </div>
+              )}
+
+              {selectedAppointment.requiresSpecialist && (
+                <div style={{
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffc107',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <h3 style={{
+                    marginTop: 0,
+                    marginBottom: '0.5rem',
+                    color: '#856404',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    ⚠️ Specialist Referral Required
+                  </h3>
+                  <p style={{ margin: 0, color: '#856404' }}>
+                    <strong>Recommended Specialist:</strong> {selectedAppointment.specialistType}
+                  </p>
+                  <p style={{
+                    margin: '0.5rem 0 0 0',
+                    fontSize: '0.9rem',
+                    color: '#856404'
+                  }}>
+                    Please contact our office to schedule an appointment with the recommended specialist.
+                  </p>
+                </div>
+              )}
+
+              {!selectedAppointment.doctorNotes && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#7f8c8d',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px'
+                }}>
+                  <p style={{ margin: 0 }}>
+                    No additional notes were recorded for this appointment.
+                  </p>
+                </div>
+              )}
+
+              <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

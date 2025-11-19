@@ -22,6 +22,10 @@ import BookAppointment from "./components/BookAppointment";
 import MyAppointments from "./components/MyAppointments";
 import ViewDoctors from "./components/ViewDoctors";
 import PatientProfile from "./components/PatientProfile";
+import Shop from "./components/Shop";
+import Cart from "./components/Cart";
+import Checkout from "./components/Checkout";
+import ShopManagement from "./components/ShopManagement";
 
 const getRole = (user) => user?.role || user?.employeeType;
 
@@ -174,6 +178,33 @@ function App() {
           <Route
             path="/reports"
             element={user ? <Reports user={user} /> : <Navigate to="/login" />}
+          />
+
+          {/* Shop Routes */}
+          <Route
+            path="/shop"
+            element={user ? <Shop user={user} /> : <Navigate to="/login" />}
+          />
+
+          <Route
+            path="/cart"
+            element={user ? <Cart user={user} /> : <Navigate to="/login" />}
+          />
+
+          <Route
+            path="/checkout"
+            element={user ? <Checkout user={user} /> : <Navigate to="/login" />}
+          />
+
+          <Route
+            path="/shop-management"
+            element={
+              user && (user.role === "Receptionist" || user.role === "Admin") ? (
+                <ShopManagement user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
           />
 
           {/* HOME (root) */}

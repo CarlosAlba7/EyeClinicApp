@@ -7,7 +7,9 @@ const Appointments = ({ user }) => {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [completingAppointment, setCompletingAppointment] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [filterStatus, setFilterStatus] = useState('');
   const [formData, setFormData] = useState({
@@ -17,6 +19,11 @@ const Appointments = ({ user }) => {
     appointmentTime: '',
     appointmentStatus: 'Scheduled',
     reason: '',
+  });
+  const [completionData, setCompletionData] = useState({
+    doctorNotes: '',
+    requiresSpecialist: false,
+    specialistType: '',
   });
 
   useEffect(() => {
@@ -110,8 +117,52 @@ const Appointments = ({ user }) => {
     setShowModal(true);
   };
 
+  const handleOpenCompleteModal = (appointment) => {
+    setCompletingAppointment(appointment);
+    setCompletionData({
+      doctorNotes: '',
+      requiresSpecialist: false,
+      specialistType: '',
+    });
+    setShowCompleteModal(true);
+  };
+
+  const handleCompleteSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await appointmentAPI.complete(completingAppointment.apptID, completionData);
+      showMessage('success', 'Appointment marked as completed');
+      setShowCompleteModal(false);
+      setCompletingAppointment(null);
+      fetchData();
+    } catch (error) {
+      showMessage('error', error.response?.data?.message || 'Failed to complete appointment');
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+      try {
+        await appointmentAPI.cancel(id);
+        showMessage('success', 'Appointment cancelled');
+        fetchData();
+      } catch (error) {
+        showMessage('error', 'Failed to cancel appointment');
+      }
+    }
+  };
+
+  const handleCompletionInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setCompletionData({
+      ...completionData,
+      [name]: type === 'checkbox' ? checked : value,
+    });
+  };
+
   const canModify = user.employeeType === 'Admin' || user.employeeType === 'Receptionist';
   const canEdit = user.employeeType === 'Admin' || user.employeeType === 'Receptionist' || user.employeeType === 'Doctor';
+  const isDoctor = user.employeeType === 'Doctor' || user.employeeType === 'Admin';
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -186,6 +237,22 @@ const Appointments = ({ user }) => {
                 {canEdit && (
                   <td>
                     <div className="table-actions">
+                      {isDoctor && appointment.appointmentStatus === 'Scheduled' && (
+                        <>
+                          <button
+                            onClick={() => handleOpenCompleteModal(appointment)}
+                            className="btn btn-sm btn-success"
+                          >
+                            Complete
+                          </button>
+                          <button
+                            onClick={() => handleCancel(appointment.apptID)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => handleEdit(appointment)}
                         className="btn btn-sm btn-warning"
@@ -302,6 +369,87 @@ const Appointments = ({ user }) => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCompleteModal && completingAppointment && (
+        <div className="modal-overlay" onClick={() => setShowCompleteModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Complete Appointment</h2>
+              <button onClick={() => setShowCompleteModal(false)} className="btn-close">×</button>
+            </div>
+            <form onSubmit={handleCompleteSubmit}>
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+                <strong>Patient:</strong> {completingAppointment.patientName}<br />
+                <strong>Date:</strong> {completingAppointment.appointmentDate?.split('T')[0]}<br />
+                <strong>Time:</strong> {completingAppointment.appointmentTime}
+              </div>
+
+              <div className="form-group">
+                <label>Doctor's Notes *</label>
+                <textarea
+                  name="doctorNotes"
+                  className="form-control"
+                  value={completionData.doctorNotes}
+                  onChange={handleCompletionInputChange}
+                  placeholder="Describe what happened during the appointment..."
+                  rows="5"
+                  required
+                  style={{ minHeight: '120px' }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    name="requiresSpecialist"
+                    checked={completionData.requiresSpecialist}
+                    onChange={handleCompletionInputChange}
+                  />
+                  Patient requires specialist referral
+                </label>
+              </div>
+
+              {completionData.requiresSpecialist && (
+                <div className="form-group">
+                  <label>Specialist Type *</label>
+                  <select
+                    name="specialistType"
+                    className="form-control"
+                    value={completionData.specialistType}
+                    onChange={handleCompletionInputChange}
+                    required
+                  >
+                    <option value="">Select Specialist Type</option>
+                    <option value="Optometrist">Optometrist</option>
+                    <option value="Ophthalmologist">Ophthalmologist</option>
+                    <option value="Optician">Optician</option>
+                    <option value="Glaucoma Specialist">Glaucoma Specialist</option>
+                    <option value="Retina Specialist">Retina Specialist</option>
+                    <option value="Cornea Specialist">Cornea Specialist</option>
+                    <option value="Pediatric Ophthalmologist">Pediatric Ophthalmologist</option>
+                    <option value="Neuro-Ophthalmologist">Neuro-Ophthalmologist</option>
+                    <option value="Oculoplastic Surgeon">Oculoplastic Surgeon</option>
+                  </select>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-success">
+                  Mark as Completed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCompleteModal(false)}
                   className="btn btn-secondary"
                 >
                   Cancel

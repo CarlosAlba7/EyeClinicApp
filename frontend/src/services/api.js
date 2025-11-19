@@ -79,6 +79,8 @@ export const appointmentAPI = {
   create: (data) => api.post("/appointments", data),
   update: (id, data) => api.put(`/appointments/${id}`, data),
   delete: (id) => api.delete(`/appointments/${id}`),
+  complete: (id, data) => api.post(`/appointments/${id}/complete`, data),
+  cancel: (id) => api.post(`/appointments/${id}/cancel`),
 };
 
 // Invoice API
@@ -105,6 +107,23 @@ export const reportAPI = {
   outstandingInvoices: () => api.get("/reports/outstanding-invoices"),
   doctorWorkload: (month, year) =>
     api.get("/reports/doctor-workload", { params: { month, year } }),
+};
+
+// Shop API
+export const shopAPI = {
+  getAllItems: () => api.get("/shop/items"),
+  getItemById: (id) => api.get(`/shop/items/${id}`),
+  createItem: (data) => api.post("/shop/items", data),
+  updateItem: (id, data) => api.put(`/shop/items/${id}`, data),
+  deleteItem: (id) => api.delete(`/shop/items/${id}`),
+  addToCart: (data) => api.post("/shop/cart", data),
+  getCart: () => api.get("/shop/cart"),
+  updateCartItem: (cartID, data) => api.put(`/shop/cart/${cartID}`, data),
+  removeFromCart: (cartID) => api.delete(`/shop/cart/${cartID}`),
+  checkout: (data) => api.post("/shop/checkout", data),
+  getOrders: () => api.get("/shop/orders"),
+  getAllOrders: () => api.get("/shop/orders/all"),
+  updateOrderStatus: (orderID, status) => api.put(`/shop/orders/${orderID}/status`, { status }),
 };
 
 export default api;
