@@ -11,8 +11,6 @@ router.get('/items', authenticateToken, async (req, res) => {
     const userRole = req.user.role || req.user.employeeType;
     const isStaff = userRole === 'Receptionist' || userRole === 'Admin';
 
-    console.log('Shop items request - showAll:', showAll, 'userRole:', userRole, 'isStaff:', isStaff);
-
     // Check if isActive column exists
     const [columns] = await db.query(
       "SHOW COLUMNS FROM shop_items LIKE 'isActive'"
@@ -30,19 +28,15 @@ router.get('/items', authenticateToken, async (req, res) => {
     if (hasIsActiveColumn) {
       if (showAll && isStaff) {
         // Management view - show all items including inactive
-        console.log('Management view - showing all items');
       } else {
         // Shop view - always show only active items for everyone
         query += ' WHERE isActive = 1';
-        console.log('Shop view - filtering to active items only');
       }
     }
 
     query += ' ORDER BY category, itemName';
-    console.log('Query:', query);
 
     const [items] = await db.query(query);
-    console.log('Returning', items.length, 'items');
     res.json(items);
   } catch (error) {
     console.error('Error fetching shop items:', error);

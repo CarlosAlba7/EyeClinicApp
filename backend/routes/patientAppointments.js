@@ -64,12 +64,16 @@ router.post(
         return res.status(404).json({ message: "Patient profile missing" });
       }
 
+      // Ensure date is stored exactly as received (YYYY-MM-DD format)
+      const dateOnly = appointmentDate.split('T')[0]; // Extract just the date part if it includes time
+
       // Check if the appointment time is in the future (CST)
-      if (isInPastCST(appointmentDate, appointmentTime)) {
+      if (isInPastCST(dateOnly, appointmentTime)) {
         return res.status(400).json({ message: "Cannot book appointments in the past (CST)" });
       }
 
       // Insert appointment
+
       const [result] = await db.query(
         `INSERT INTO appointment
         (patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason, appointmentType)
@@ -77,7 +81,7 @@ router.post(
         [
           patient.patientID,
           employeeID,
-          appointmentDate,
+          dateOnly,
           appointmentTime,
           reason,
           appointmentType || 'Normal',

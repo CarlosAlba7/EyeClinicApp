@@ -103,8 +103,11 @@ router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), asy
       appointmentStatus, reason, appointmentType
     } = req.body;
 
+    // Ensure date is stored exactly as received (YYYY-MM-DD format)
+    const dateOnly = appointmentDate.split('T')[0]; // Extract just the date part if it includes time
+
     // Check if the appointment time is in the future (CST)
-    if (isInPastCST(appointmentDate, appointmentTime)) {
+    if (isInPastCST(dateOnly, appointmentTime)) {
       return res.status(400).json({ message: 'Cannot schedule appointments in the past (CST)' });
     }
 
@@ -113,7 +116,7 @@ router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), asy
         patientID, employeeID, appointmentDate, appointmentTime,
         appointmentStatus, reason, appointmentType
       ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason, appointmentType || 'Normal']
+      [patientID, employeeID, dateOnly, appointmentTime, appointmentStatus, reason, appointmentType || 'Normal']
     );
 
     res.status(201).json({
@@ -134,12 +137,15 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin', 'Receptionist', 'D
       appointmentStatus, reason, appointmentType
     } = req.body;
 
+    // Ensure date is stored exactly as received (YYYY-MM-DD format)
+    const dateOnly = appointmentDate ? appointmentDate.split('T')[0] : appointmentDate;
+
     const [result] = await db.query(
       `UPDATE appointment SET
         patientID = ?, employeeID = ?, appointmentDate = ?,
         appointmentTime = ?, appointmentStatus = ?, reason = ?, appointmentType = ?
       WHERE apptID = ?`,
-      [patientID, employeeID, appointmentDate, appointmentTime,
+      [patientID, employeeID, dateOnly, appointmentTime,
        appointmentStatus, reason, appointmentType || 'Normal', req.params.id]
     );
 
