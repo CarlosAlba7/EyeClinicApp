@@ -31,7 +31,7 @@ const ShopManagement = ({ user }) => {
 
   const fetchItems = async () => {
     try {
-      const response = await shopAPI.getAllItems();
+      const response = await shopAPI.getAllItems(true); // Pass true to show all items including inactive
       setItems(response.data);
     } catch (error) {
       console.error("Error fetching items:", error);
@@ -120,13 +120,29 @@ const ShopManagement = ({ user }) => {
 
     try {
       setError("");
-      await shopAPI.deleteItem(itemID);
-      setSuccess("Item deleted successfully!");
+      const response = await shopAPI.deleteItem(itemID);
+      setSuccess(response.data.message || "Item deleted successfully!");
       fetchItems();
       fetchNotifications();
     } catch (error) {
       console.error("Error deleting item:", error);
       setError(error.response?.data?.message || "Failed to delete item");
+    }
+  };
+
+  const handleRestore = async (itemID, itemName) => {
+    if (!window.confirm(`Are you sure you want to restore "${itemName}"?`)) {
+      return;
+    }
+
+    try {
+      setError("");
+      await shopAPI.restoreItem(itemID);
+      setSuccess("Item restored successfully!");
+      fetchItems();
+    } catch (error) {
+      console.error("Error restoring item:", error);
+      setError(error.response?.data?.message || "Failed to restore item");
     }
   };
 
@@ -341,69 +357,107 @@ const ShopManagement = ({ user }) => {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.itemID}>
-                  <td>
-                    <strong>{item.itemName}</strong>
-                    {item.description && (
-                      <div style={{ fontSize: "0.875rem", color: "#666" }}>
-                        {item.description.substring(0, 50)}
-                        {item.description.length > 50 ? "..." : ""}
+              {items.map((item) => {
+                const isInactive = item.isActive === 0 || item.isActive === false;
+                return (
+                  <tr
+                    key={item.itemID}
+                    style={{
+                      opacity: isInactive ? 0.6 : 1,
+                      backgroundColor: isInactive ? "#f5f5f5" : "transparent"
+                    }}
+                  >
+                    <td>
+                      <strong>{item.itemName}</strong>
+                      {isInactive && (
+                        <span style={{
+                          marginLeft: "0.5rem",
+                          padding: "0.25rem 0.5rem",
+                          backgroundColor: "#dc3545",
+                          color: "white",
+                          borderRadius: "4px",
+                          fontSize: "0.75rem",
+                          fontWeight: "bold"
+                        }}>
+                          INACTIVE
+                        </span>
+                      )}
+                      {item.description && (
+                        <div style={{ fontSize: "0.875rem", color: "#666" }}>
+                          {item.description.substring(0, 50)}
+                          {item.description.length > 50 ? "..." : ""}
+                        </div>
+                      )}
+                    </td>
+                    <td>{item.category || "-"}</td>
+                    <td>${Number(item.price).toFixed(2)}</td>
+                    <td>
+                      <span
+                        style={{
+                          fontWeight: "bold",
+                          color:
+                            item.stockQuantity === 0
+                              ? "#f5576c"
+                              : item.stockQuantity <= 3
+                              ? "#ffa500"
+                              : "#43e97b",
+                        }}
+                      >
+                        {item.stockQuantity}
+                      </span>
+                    </td>
+                    <td>
+                      {isInactive ? (
+                        <span style={{ color: "#dc3545", fontWeight: "bold" }}>
+                          Deleted
+                        </span>
+                      ) : item.stockQuantity === 0 ? (
+                        <span style={{ color: "#f5576c", fontWeight: "bold" }}>
+                          Out of Stock
+                        </span>
+                      ) : item.stockQuantity <= 3 ? (
+                        <span style={{ color: "#ffa500", fontWeight: "bold" }}>
+                          Low Stock
+                        </span>
+                      ) : (
+                        <span style={{ color: "#43e97b", fontWeight: "bold" }}>
+                          In Stock
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {isInactive ? (
+                          <button
+                            onClick={() => handleRestore(item.itemID, item.itemName)}
+                            className="btn btn-success"
+                            style={{ padding: "0.25rem 0.75rem", fontSize: "0.875rem" }}
+                          >
+                            Restore
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="btn btn-primary"
+                              style={{ padding: "0.25rem 0.75rem", fontSize: "0.875rem" }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.itemID, item.itemName)}
+                              className="btn btn-danger"
+                              style={{ padding: "0.25rem 0.75rem", fontSize: "0.875rem" }}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
-                    )}
-                  </td>
-                  <td>{item.category || "-"}</td>
-                  <td>${Number(item.price).toFixed(2)}</td>
-                  <td>
-                    <span
-                      style={{
-                        fontWeight: "bold",
-                        color:
-                          item.stockQuantity === 0
-                            ? "#f5576c"
-                            : item.stockQuantity <= 3
-                            ? "#ffa500"
-                            : "#43e97b",
-                      }}
-                    >
-                      {item.stockQuantity}
-                    </span>
-                  </td>
-                  <td>
-                    {item.stockQuantity === 0 ? (
-                      <span style={{ color: "#f5576c", fontWeight: "bold" }}>
-                        Out of Stock
-                      </span>
-                    ) : item.stockQuantity <= 3 ? (
-                      <span style={{ color: "#ffa500", fontWeight: "bold" }}>
-                        Low Stock
-                      </span>
-                    ) : (
-                      <span style={{ color: "#43e97b", fontWeight: "bold" }}>
-                        In Stock
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="btn btn-primary"
-                        style={{ padding: "0.25rem 0.75rem", fontSize: "0.875rem" }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.itemID, item.itemName)}
-                        className="btn btn-danger"
-                        style={{ padding: "0.25rem 0.75rem", fontSize: "0.875rem" }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

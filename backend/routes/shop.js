@@ -3,12 +3,46 @@ const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
-// Get all shop items
+// Get all shop items (only active items for shop view, all items for management)
 router.get('/items', authenticateToken, async (req, res) => {
   try {
-    const [items] = await db.query(
-      'SELECT * FROM shop_items ORDER BY category, itemName'
+    // Check if this is a management request (will include showAll query param)
+    const showAll = req.query.showAll === 'true';
+    const userRole = req.user.role || req.user.employeeType;
+    const isStaff = userRole === 'Receptionist' || userRole === 'Admin';
+
+    console.log('Shop items request - showAll:', showAll, 'userRole:', userRole, 'isStaff:', isStaff);
+
+    // Check if isActive column exists
+    const [columns] = await db.query(
+      "SHOW COLUMNS FROM shop_items LIKE 'isActive'"
     );
+
+    const hasIsActiveColumn = columns.length > 0;
+
+    let query = 'SELECT * FROM shop_items';
+
+    // Only show ALL items (including inactive) if:
+    // 1. User is staff (Receptionist or Admin)
+    // 2. showAll parameter is explicitly true (from management interface)
+    // 3. isActive column exists
+    // Otherwise ALWAYS filter to show only active items
+    if (hasIsActiveColumn) {
+      if (showAll && isStaff) {
+        // Management view - show all items including inactive
+        console.log('Management view - showing all items');
+      } else {
+        // Shop view - always show only active items for everyone
+        query += ' WHERE isActive = 1';
+        console.log('Shop view - filtering to active items only');
+      }
+    }
+
+    query += ' ORDER BY category, itemName';
+    console.log('Query:', query);
+
+    const [items] = await db.query(query);
+    console.log('Returning', items.length, 'items');
     res.json(items);
   } catch (error) {
     console.error('Error fetching shop items:', error);
@@ -38,8 +72,9 @@ router.get('/items/:id', authenticateToken, async (req, res) => {
 // Create a new shop item (Receptionist/Admin only)
 router.post('/items', authenticateToken, async (req, res) => {
   try {
-    // Check if user is receptionist or admin
-    if (req.user.role !== 'Receptionist' && req.user.role !== 'Admin') {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
     }
 
@@ -67,8 +102,9 @@ router.post('/items', authenticateToken, async (req, res) => {
 // Update a shop item (Receptionist/Admin only)
 router.put('/items/:id', authenticateToken, async (req, res) => {
   try {
-    // Check if user is receptionist or admin
-    if (req.user.role !== 'Receptionist' && req.user.role !== 'Admin') {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
     }
 
@@ -90,14 +126,50 @@ router.put('/items/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete a shop item (Receptionist/Admin only)
+// Delete a shop item (Receptionist/Admin only) - Uses soft delete
 router.delete('/items/:id', authenticateToken, async (req, res) => {
   try {
-    // Check if user is receptionist or admin
-    if (req.user.role !== 'Receptionist' && req.user.role !== 'Admin') {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
     }
 
+    // Check if isActive column exists
+    const [columns] = await db.query(
+      "SHOW COLUMNS FROM shop_items LIKE 'isActive'"
+    );
+    const hasIsActiveColumn = columns.length > 0;
+
+    // Check if item has been ordered
+    const [orderItems] = await db.query(
+      'SELECT COUNT(*) as count FROM order_items WHERE itemID = ?',
+      [req.params.id]
+    );
+
+    if (orderItems[0].count > 0 && hasIsActiveColumn) {
+      // Soft delete - mark as inactive instead of physically deleting
+      const [result] = await db.query(
+        'UPDATE shop_items SET isActive = 0 WHERE itemID = ?',
+        [req.params.id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Item not found' });
+      }
+
+      return res.json({
+        message: 'Item marked as inactive (soft deleted) because it has order history',
+        softDeleted: true
+      });
+    } else if (orderItems[0].count > 0 && !hasIsActiveColumn) {
+      // If no isActive column, can't soft delete items with order history
+      return res.status(400).json({
+        message: 'Cannot delete item because it has order history. Please run the database migration to add soft delete support.'
+      });
+    }
+
+    // Hard delete if never ordered
     const [result] = await db.query(
       'DELETE FROM shop_items WHERE itemID = ?',
       [req.params.id]
@@ -107,10 +179,38 @@ router.delete('/items/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    res.json({ message: 'Item deleted successfully' });
+    res.json({
+      message: 'Item permanently deleted',
+      softDeleted: false
+    });
   } catch (error) {
     console.error('Error deleting shop item:', error);
     res.status(500).json({ message: 'Error deleting shop item' });
+  }
+});
+
+// Restore a soft-deleted item (Receptionist/Admin only)
+router.put('/items/:id/restore', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin') {
+      return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
+    }
+
+    const [result] = await db.query(
+      'UPDATE shop_items SET isActive = 1 WHERE itemID = ?',
+      [req.params.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    res.json({ message: 'Item restored successfully' });
+  } catch (error) {
+    console.error('Error restoring shop item:', error);
+    res.status(500).json({ message: 'Error restoring shop item' });
   }
 });
 
@@ -336,8 +436,9 @@ router.post('/checkout', authenticateToken, async (req, res) => {
 // Get low stock notifications (Receptionist/Admin only)
 router.get('/notifications/low-stock', authenticateToken, async (req, res) => {
   try {
-    // Check if user is receptionist or admin
-    if (req.user.role !== 'Receptionist' && req.user.role !== 'Admin') {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin' && userRole !== 'Doctor') {
       return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
     }
 
@@ -355,8 +456,9 @@ router.get('/notifications/low-stock', authenticateToken, async (req, res) => {
 // Mark notification as read (Receptionist/Admin only)
 router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
-    // Check if user is receptionist or admin
-    if (req.user.role !== 'Receptionist' && req.user.role !== 'Admin') {
+    // Check if user is receptionist or admin (check both role and employeeType)
+    const userRole = req.user.role || req.user.employeeType;
+    if (userRole !== 'Receptionist' && userRole !== 'Admin') {
       return res.status(403).json({ message: 'Access denied. Receptionist or Admin role required.' });
     }
 

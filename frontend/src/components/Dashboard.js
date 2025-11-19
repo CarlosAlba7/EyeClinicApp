@@ -5,6 +5,7 @@ import {
   employeeAPI,
   invoiceAPI,
   doctorAlertsAPI,
+  shopAPI,
 } from "../services/api";
 
 const Dashboard = ({ user }) => {
@@ -15,6 +16,7 @@ const Dashboard = ({ user }) => {
     totalEmployees: 0,
     pendingInvoices: 0,
     unreadAlerts: 0,
+    lowStockAlerts: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -28,6 +30,7 @@ const Dashboard = ({ user }) => {
 
       // Fetch alerts count only for doctors and admins
       const isDoctor = user.employeeType === 'Doctor' || user.employeeType === 'Admin';
+      const isReceptionist = user.employeeType === 'Receptionist' || user.employeeType === 'Admin';
 
       const promises = [
         patientAPI.getAll(),
@@ -41,9 +44,37 @@ const Dashboard = ({ user }) => {
         promises.push(doctorAlertsAPI.getUnreadCount());
       }
 
+      if (isReceptionist) {
+        promises.push(shopAPI.getLowStockNotifications());
+      }
+
       const results = await Promise.all(promises);
 
-      const [patients, appointments, todayAppts, employees, invoices, alertsData] = results;
+      let lowStockCount = 0;
+      let unreadAlertsCount = 0;
+      let patients, appointments, todayAppts, employees, invoices;
+
+      if (isDoctor && isReceptionist) {
+        // Admin case - has both doctor alerts and low stock alerts
+        [patients, appointments, todayAppts, employees, invoices] = results;
+        const alertsData = results[5];
+        const lowStockData = results[6];
+        unreadAlertsCount = alertsData ? alertsData.data.unreadCount : 0;
+        lowStockCount = lowStockData ? lowStockData.data.length : 0;
+      } else if (isDoctor) {
+        // Doctor only
+        [patients, appointments, todayAppts, employees, invoices] = results;
+        const alertsData = results[5];
+        unreadAlertsCount = alertsData ? alertsData.data.unreadCount : 0;
+      } else if (isReceptionist) {
+        // Receptionist only
+        [patients, appointments, todayAppts, employees, invoices] = results;
+        const lowStockData = results[5];
+        lowStockCount = lowStockData ? lowStockData.data.length : 0;
+      } else {
+        // Other roles
+        [patients, appointments, todayAppts, employees, invoices] = results;
+      }
 
       setStats({
         totalPatients: patients.data.length,
@@ -51,7 +82,8 @@ const Dashboard = ({ user }) => {
         todayAppointments: todayAppts.data.length,
         totalEmployees: employees.data.length,
         pendingInvoices: invoices.data.length,
-        unreadAlerts: isDoctor && alertsData ? alertsData.data.unreadCount : 0,
+        unreadAlerts: unreadAlertsCount,
+        lowStockAlerts: lowStockCount,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -162,6 +194,36 @@ const Dashboard = ({ user }) => {
             <p>{stats.unreadAlerts > 0 ? "Unread Alerts!" : "No Alerts"}</p>
           </div>
         )}
+
+        {(user.employeeType === "Receptionist" || user.employeeType === "Admin") && (
+          <div
+            className="dashboard-card"
+            style={{
+              background: stats.lowStockAlerts > 0
+                ? "linear-gradient(135deg, #ff6a00 0%, #ee0979 100%)"
+                : "linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)",
+              cursor: "pointer",
+              position: "relative",
+              animation: stats.lowStockAlerts > 0 ? "pulse 2s infinite" : "none",
+            }}
+            onClick={() => (window.location.href = "/shop-management")}
+          >
+            {stats.lowStockAlerts > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "10px",
+                  fontSize: "2rem",
+                }}
+              >
+                📦
+              </div>
+            )}
+            <h3>{stats.lowStockAlerts}</h3>
+            <p>{stats.lowStockAlerts > 0 ? "Low Stock Items!" : "Stock OK"}</p>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -204,6 +266,41 @@ const Dashboard = ({ user }) => {
                   }}
                 >
                   {stats.unreadAlerts}
+                </span>
+              )}
+            </a>
+          )}
+          {(user.employeeType === "Receptionist" || user.employeeType === "Admin") && (
+            <a
+              href="/shop-management"
+              className={`btn ${stats.lowStockAlerts > 0 ? "btn-danger" : "btn-info"}`}
+              style={{
+                position: "relative",
+                fontWeight: stats.lowStockAlerts > 0 ? "700" : "normal",
+              }}
+            >
+              {stats.lowStockAlerts > 0 ? "📦 " : ""}
+              View Stock Alerts
+              {stats.lowStockAlerts > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-8px",
+                    right: "-8px",
+                    backgroundColor: "#fff",
+                    color: "#dc3545",
+                    borderRadius: "50%",
+                    width: "24px",
+                    height: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.75rem",
+                    fontWeight: "700",
+                    border: "2px solid #dc3545",
+                  }}
+                >
+                  {stats.lowStockAlerts}
                 </span>
               )}
             </a>

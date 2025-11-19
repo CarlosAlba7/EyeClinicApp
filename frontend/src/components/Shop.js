@@ -65,7 +65,7 @@ const Shop = ({ user }) => {
           >
             View Cart
           </button>
-          {user.role === "Receptionist" && (
+          {(user.employeeType === "Receptionist" || user.employeeType === "Admin") && (
             <button
               onClick={() => navigate("/shop-management")}
               className="btn btn-secondary"

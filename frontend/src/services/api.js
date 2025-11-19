@@ -114,11 +114,12 @@ export const reportAPI = {
 
 // Shop API
 export const shopAPI = {
-  getAllItems: () => api.get("/shop/items"),
+  getAllItems: (showAll = false) => api.get("/shop/items", { params: { showAll } }),
   getItemById: (id) => api.get(`/shop/items/${id}`),
   createItem: (data) => api.post("/shop/items", data),
   updateItem: (id, data) => api.put(`/shop/items/${id}`, data),
   deleteItem: (id) => api.delete(`/shop/items/${id}`),
+  restoreItem: (id) => api.put(`/shop/items/${id}/restore`),
   addToCart: (data) => api.post("/shop/cart", data),
   getCart: () => api.get("/shop/cart"),
   updateCartItem: (cartID, data) => api.put(`/shop/cart/${cartID}`, data),
