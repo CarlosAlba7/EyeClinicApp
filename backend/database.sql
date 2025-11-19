@@ -593,4 +593,13 @@ BEGIN
   END IF;
 END$$
 
+
+ALTER TABLE `appointment`
+ADD COLUMN `appointmentSummary` text DEFAULT NULL COMMENT 'Doctor summary of what happened during appointment',
+ADD COLUMN `needsSpecialist` tinyint(1) DEFAULT 0 COMMENT 'Whether patient needs to see a specialist',
+ADD COLUMN `specialistType` varchar(120) DEFAULT NULL COMMENT 'Type of specialist needed',
+ADD COLUMN `completedAt` datetime DEFAULT NULL COMMENT 'When the appointment was marked as complete',
+ADD COLUMN `completedBy` int DEFAULT NULL COMMENT 'Doctor who completed the appointment',
+ADD CONSTRAINT `fk_appt_completed_by` FOREIGN KEY (`completedBy`) REFERENCES `employee` (`employeeID`) ON DELETE SET NULL ON UPDATE CASCADE;
+
 -- Dump completed on 2025-11-18  9:33:29

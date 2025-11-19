@@ -176,15 +176,6 @@ router.put(
         return res.status(403).json({ message: "Not allowed" });
       }
 
-      const {
-        firstName,
-        middleInit,
-        lastName,
-        email,
-        phone,
-        patientAddress
-      } = req.body;
-
       // Update patient table (only editable fields)
       await db.query(
         `UPDATE patient SET 
