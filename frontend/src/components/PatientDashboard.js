@@ -45,6 +45,16 @@ export default function PatientDashboard() {
   if (loading) return <div className="patient-loading">Loading...</div>;
   if (!profile) return <div className="patient-loading">No profile found</div>;
 
+  // Format date without timezone issues
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    // Extract just the date part (YYYY-MM-DD) and format it
+    const datePart = dateString.split('T')[0];
+    const [year, month, day] = datePart.split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
+  };
+
   // Calculate statistics
   const upcomingAppointments = appointments.filter(
     appt => appt.appointmentStatus === 'Scheduled' && 
@@ -93,7 +103,7 @@ export default function PatientDashboard() {
         }}>
           <div>
             <strong>📅 Next Appointment:</strong> {' '}
-            {new Date(nextAppointment.appointmentDate).toLocaleDateString()} at {nextAppointment.appointmentTime}
+            {formatDate(nextAppointment.appointmentDate)} at {nextAppointment.appointmentTime}
             {nextAppointment.doctorName && ` with ${nextAppointment.doctorName}`}
           </div>
           <button 
@@ -150,7 +160,7 @@ export default function PatientDashboard() {
                 alignItems: 'center'
               }}>
                 <div>
-                  <strong>{new Date(appt.appointmentDate).toLocaleDateString()}</strong> at {appt.appointmentTime}
+                  <strong>{formatDate(appt.appointmentDate)}</strong> at {appt.appointmentTime}
                   <br />
                   <span style={{ color: '#7f8c8d', fontSize: '0.9rem' }}>
                     {appt.doctorName || 'Doctor TBD'} - {appt.reason}

@@ -2,6 +2,16 @@ import { useState, useEffect } from 'react';
 import { reportAPI, shopAPI, employeeAPI, patientAPI } from '../services/api';
 
 const Reports = () => {
+  // Format date without timezone issues
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    // Extract just the date part (YYYY-MM-DD) and format it
+    const datePart = dateString.split('T')[0];
+    const [year, month, day] = datePart.split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
+  };
+
   const [selectedReport, setSelectedReport] = useState('');
   const [activeReport, setActiveReport] = useState('');
   const [reportData, setReportData] = useState(null);
@@ -214,7 +224,7 @@ const Reports = () => {
                     <td>{row.doctorName}</td>
                     <td>{row.patientName}</td>
                     <td>{row.patientAge}</td>
-                    <td>{new Date(row.appointmentDate).toLocaleDateString()}</td>
+                    <td>{formatDate(row.appointmentDate)}</td>
                     <td>{row.appointmentTime}</td>
                     <td>{row.appointmentType}</td>
                     <td>{row.appointmentStatus}</td>
@@ -273,7 +283,7 @@ const Reports = () => {
                     <tbody>
                       {patient.appointments.map((appt, apptIdx) => (
                         <tr key={apptIdx}>
-                          <td>{new Date(appt.appointmentDate).toLocaleDateString()}</td>
+                          <td>{formatDate(appt.appointmentDate)}</td>
                           <td>{appt.appointmentTime}</td>
                           <td>{appt.appointmentType}</td>
                           <td>{appt.appointmentStatus}</td>
