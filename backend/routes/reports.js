@@ -6,66 +6,50 @@ const { authenticateToken } = require('../middleware/auth');
 // REPORT 1: Appointment Statistics
 router.get('/appointment-statistics', authenticateToken, async (req, res) => {
   try {
+
     const {
-      startDate,
-      endDate,
       employeeID,
-      patientID,
-      status,
-      sortBy = 'count',
-      sortOrder = 'DESC'
+      startDate,
+      endDate
     } = req.query;
 
-    // Base query
+    const params = [];
+    
     let query = `
       SELECT
-        appointmentStatus,
-        COUNT(*) AS count,
-        ROUND(COUNT(*) * 100.0 / SELECT COUNT(*) FROM appointment), 2) AS percentage
-      FROM appointment
-      WHERE appointmentStatus IS NOT NULL
+        e.employeeID,
+        CONCAT(e.firstName, ' ', e.lastName) AS doctorName,
+        COUNT(a.apptID) AS totalAppointments,
+        SUM(CASE WHEN a.appointmentStatus = 'Completed' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN a.appointmentStatus = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN a.appointmentStatus = 'No-Show' THEN 1 ELSE 0 END) AS noShow,
+        ROUND(
+          SUM(CASE WHEN a.appointmentStatus = 'Completed' THEN 1 ELSE 0 END) /
+          NULLIF(COUNT(a.apptID), 0) * 100, 2
+        ) AS completionRate
+      FROM employee e
+      LEFT JOIN appointment a
+        ON e.employeeID = a.employeeID
+        ${startDate && endDate ? "AND a.appointmentDate BETWEEN ? AND ?" : ""}
+      WHERE e.employeeType = 'Doctor'
+      ${employeeID ? "AND e.employeeID = ?" : ""}
+      GROUP BY e.employeeID, e.firstName, e.lastName
+      ORDER BY totalAppointments DESC
     `;
 
-    const params = [];
-
-    // Apply filters
-    if (startDate && endDate) {
-      query += ` AND appointmentDate BETWEEN ? AND ?`;
+    if (startDate != "" && endDate != "") {
       params.push(startDate, endDate);
     }
 
-    if (employeeID) {
-      query += ` AND employeeID = ?`;
+    if (employeeID != "" && employeeID != undefined) {
       params.push(employeeID);
     }
-
-    if (patientID) {
-      query += ` AND patientID = ?`;
-      params.push(patientID);
-    }
-
-    if (status) {
-      query += ` AND appointmentStatus = ?`;
-      params.push(status);
-    }
-
-    query += ` GROUP BY appointmentStatus`;
-
-    // Check if valid sorting
-    const validSortColumns = ['appointmentStatus', 'count', 'percentage'];
-    const validSortOrders = ['ASC', 'DESC'];
-
-    const safeSortBy = validSortColumns.includes(sortBy) ? sortBy : 'count';
-    const safeSortOrder = validSortOrders.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
-
-    query += ` ORDER BY ${safeSortBy} ${safeSortOrder}`;
 
     const [results] = await db.query(query, params);
 
     res.json({
       title: 'Appointment Statistics',
-      filters: { startDate, endDate, employeeID, patientID, status },
-      sort: { sortBy: safeSortBy, sortOrder: safeSortOrder },
+      filters: { employeeID, startDate, endDate },
       data: results
     });
   } catch (error) {
@@ -73,30 +57,6 @@ router.get('/appointment-statistics', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error generating report' });
   }
 });
-
-// REPORT 1: Appointment Statistics by Status
-/*router.get('/appointment-statistics', authenticateToken, async (req, res) => {
-  try {
-    const [results] = await db.query(`
-      SELECT 
-        appointmentStatus,
-        COUNT(*) as count,
-        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM appointment), 2) as percentage
-      FROM appointment
-      WHERE appointmentStatus IS NOT NULL
-      GROUP BY appointmentStatus
-      ORDER BY count DESC
-    `);
-
-    res.json({
-      title: 'Appointment Statistics by Status',
-      data: results
-    });
-  } catch (error) {
-    console.error('Appointment statistics error:', error);
-    res.status(500).json({ message: 'Server error generating report' });
-  }
-});*/
 
 // REPORT 2: Revenue Report by Month
 router.get('/revenue-by-month', authenticateToken, async (req, res) => {
@@ -134,15 +94,17 @@ router.get('/employee-performance', authenticateToken, async (req, res) => {
         CONCAT(e.firstName, ' ', e.lastName) as employeeName,
         e.employeeType,
         e.specialization,
-        COUNT(DISTINCT a.apptID) as totalAppointments,
-        COUNT(DISTINCT CASE WHEN a.appointmentStatus = 'Completed' THEN a.apptID END) as completedAppointments,
-        ROUND(COUNT(DISTINCT CASE WHEN a.appointmentStatus = 'Completed' THEN a.apptID END) * 100.0 / 
-              NULLIF(COUNT(DISTINCT a.apptID), 0), 2) as completionRate
+        COALESCE(SUM(i.invoiceTotal), 0) as totalRevenue,
+        COALESCE(ROUND(
+          COUNT(DISTINCT CASE WHEN a.appointmentStatus = 'Completed' THEN a.apptID END) * 100.0 / 
+          NULLIF(COUNT(DISTINCT a.apptID), 0), 2
+        ), 0) as completionRate
       FROM employee e
       LEFT JOIN appointment a ON e.employeeID = a.employeeID
+      LEFT JOIN invoice i ON a.apptID = i.apptID
       WHERE e.employeeType IN ('Doctor', 'Receptionist')
       GROUP BY e.employeeID, e.firstName, e.lastName, e.employeeType, e.specialization
-      ORDER BY totalAppointments DESC
+      ORDER BY totalRevenue DESC
     `);
 
     res.json({
@@ -204,51 +166,78 @@ router.get('/patient-demographics', authenticateToken, async (req, res) => {
   }
 });
 
-// QUERY 1: Search patients with medical conditions
+// QUERY 1: Search patients
 router.get('/patients-by-condition', authenticateToken, async (req, res) => {
   try {
-    const { condition } = req.query;
-    
-    if (!condition) {
-      return res.status(400).json({ message: 'Condition parameter is required' });
+    const { gender, minAge, maxAge } = req.query;
+
+    const params = [];
+    let conditions = [];
+
+    // Gender filter
+    if (gender) {
+      conditions.push("gender = ?");
+      params.push(gender);
     }
 
-    const [results] = await db.query(`
-      SELECT 
-        patientID,
+    // Age range filter
+    if (minAge) {
+      conditions.push("TIMESTAMPDIFF(YEAR, patientBirthdate, CURDATE()) >= ?");
+      params.push(Number(minAge));
+    }
+
+    if (maxAge) {
+      conditions.push("TIMESTAMPDIFF(YEAR, patientBirthdate, CURDATE()) <= ?");
+      params.push(Number(maxAge));
+    }
+
+    let query = `
+      SELECT
         CONCAT(firstName, ' ', lastName) as patientName,
         email,
         phone,
         medHistory,
-        visionHistory
+        visionHistory,
+        gender,
+        patientBirthdate
       FROM patient
-      WHERE medHistory LIKE ? OR visionHistory LIKE ?
-      ORDER BY lastName, firstName
-    `, [`%${condition}%`, `%${condition}%`]);
+    `;
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+
+    query += " ORDER BY lastName, firstName";
+
+    const [results] = await db.query(query, params);
 
     res.json({
-      query: 'Patients by Medical Condition',
-      condition: condition,
+      query: 'Patients by Filter',
+      filters: {
+        gender,
+        minAge,
+        maxAge
+      },
       count: results.length,
       data: results
     });
   } catch (error) {
-    console.error('Patients by condition error:', error);
-    res.status(500).json({ message: 'Server error executing query' });
+    console.error('Patients query error:', error);
+    res.status(500).json({ message: 'Server error executing patient query' });
   }
 });
 
 // QUERY 2: Appointments in date range
 router.get('/appointments-by-date-range', authenticateToken, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, employeeID, status } = req.query;
     
     if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Start date and end date are required' });
     }
 
-    const [results] = await db.query(`
-      SELECT 
+    let query = `
+      SELECT
         a.apptID,
         a.appointmentDate,
         a.appointmentTime,
@@ -262,13 +251,29 @@ router.get('/appointments-by-date-range', authenticateToken, async (req, res) =>
       LEFT JOIN patient p ON a.patientID = p.patientID
       LEFT JOIN employee e ON a.employeeID = e.employeeID
       WHERE a.appointmentDate BETWEEN ? AND ?
-      ORDER BY a.appointmentDate, a.appointmentTime
-    `, [startDate, endDate]);
+    `;
+
+    const params = [startDate, endDate];
+
+    // optional doctor
+    if (employeeID && employeeID !== "") {
+      query += " AND a.employeeID = ?";
+      params.push(employeeID);
+    }
+
+    // optional status
+    if (status && status !== "") {
+      query += " AND a.appointmentStatus = ?";
+      params.push(status);
+    }
+
+    query += " ORDER BY a.appointmentDate, a.appointmentTime";
+
+    const [results] = await db.query(query, params);
 
     res.json({
       query: 'Appointments by Date Range',
-      startDate,
-      endDate,
+      filters: { startDate, endDate, employeeID, status },
       count: results.length,
       data: results
     });
@@ -349,6 +354,25 @@ router.get('/doctor-workload', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Doctor workload error:', error);
     res.status(500).json({ message: 'Server error executing query' });
+  }
+});
+
+// Get list of doctors for report filters
+router.get('/doctors', authenticateToken, async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT 
+        employeeID AS id,
+        CONCAT(firstName, ' ', lastName) as name
+      FROM employee
+      WHERE employeeType = 'Doctor'
+      ORDER BY lastName, firstName
+    `);
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching doctor list:', error);
+    res.status(500).json({ message: 'Server error fetching doctor list' });
   }
 });
 
