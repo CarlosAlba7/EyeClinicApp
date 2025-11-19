@@ -46,6 +46,7 @@ router.post("/login", async (req, res) => {
         user: {
           userID: employee.employeeID,
           role: employee.employeeType,
+          employeeType: employee.employeeType, // Add this for frontend checks
           firstName: employee.firstName,
           lastName: employee.lastName,
           email: employee.email,

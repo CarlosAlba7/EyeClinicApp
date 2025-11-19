@@ -593,4 +593,17 @@ BEGIN
   END IF;
 END$$
 
+CREATE TABLE IF NOT EXISTS appointment_feedback (
+  feedbackID INT AUTO_INCREMENT PRIMARY KEY,
+  apptID INT NOT NULL,
+  doctorNotes TEXT,
+  requiresSpecialist BOOLEAN DEFAULT FALSE,
+  specialistType VARCHAR(100),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (apptID) REFERENCES appointment(apptID) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Add index for faster lookups
+CREATE INDEX idx_appt_feedback ON appointment_feedback(apptID);
 -- Dump completed on 2025-11-18  9:33:29

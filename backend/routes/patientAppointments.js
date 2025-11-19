@@ -17,16 +17,14 @@ router.get(
           a.appointmentTime,
           a.appointmentStatus,
           a.reason,
-          a.appointmentSummary,
-          a.needsSpecialist,
-          a.specialistType,
-          a.completedAt,
           CONCAT(e.firstName, ' ', e.lastName) AS doctorName,
           e.specialization,
-          CONCAT(completedByEmp.firstName, ' ', completedByEmp.lastName) as completedByName
+          af.doctorNotes,
+          af.requiresSpecialist,
+          af.specialistType
         FROM appointment a
         LEFT JOIN employee e ON a.employeeID = e.employeeID
-        LEFT JOIN employee completedByEmp ON a.completedBy = completedByEmp.employeeID
+        LEFT JOIN appointment_feedback af ON a.apptID = af.apptID
         JOIN patient p ON a.patientID = p.patientID
         WHERE p.userID = ?
         ORDER BY a.appointmentDate DESC, a.appointmentTime DESC`,

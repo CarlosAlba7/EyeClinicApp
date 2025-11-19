@@ -7,7 +7,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status, date, patientID } = req.query;
-    
+
     let query = `
       SELECT
         a.*,
@@ -16,11 +16,13 @@ router.get('/', authenticateToken, async (req, res) => {
         p.phone as patientPhone,
         CONCAT(e.firstName, ' ', e.lastName) as employeeName,
         e.employeeType,
-        CONCAT(completedByEmp.firstName, ' ', completedByEmp.lastName) as completedByName
+        af.doctorNotes,
+        af.requiresSpecialist,
+        af.specialistType
       FROM appointment a
       LEFT JOIN patient p ON a.patientID = p.patientID
       LEFT JOIN employee e ON a.employeeID = e.employeeID
-      LEFT JOIN employee completedByEmp ON a.completedBy = completedByEmp.employeeID
+      LEFT JOIN appointment_feedback af ON a.apptID = af.apptID
     `;
     
     let params = [];
@@ -65,11 +67,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
         p.email as patientEmail,
         CONCAT(e.firstName, ' ', e.lastName) as employeeName,
         e.employeeType,
-        CONCAT(completedByEmp.firstName, ' ', completedByEmp.lastName) as completedByName
+        af.doctorNotes,
+        af.requiresSpecialist,
+        af.specialistType
       FROM appointment a
       LEFT JOIN patient p ON a.patientID = p.patientID
       LEFT JOIN employee e ON a.employeeID = e.employeeID
-      LEFT JOIN employee completedByEmp ON a.completedBy = completedByEmp.employeeID
+      LEFT JOIN appointment_feedback af ON a.apptID = af.apptID
       WHERE a.apptID = ?`,
       [req.params.id]
     );
@@ -140,30 +144,69 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin', 'Receptionist', 'D
 });
 
 // Complete appointment (doctors only)
-router.put('/:id/complete', authenticateToken, authorizeRoles('Doctor', 'Admin'), async (req, res) => {
+router.post('/:id/complete', authenticateToken, authorizeRoles('Doctor', 'Admin'), async (req, res) => {
   try {
-    const { appointmentSummary, needsSpecialist, specialistType } = req.body;
+    const { doctorNotes, requiresSpecialist, specialistType } = req.body;
+    const apptID = req.params.id;
 
+    // Start transaction
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Update appointment status
+      const [updateResult] = await connection.query(
+        `UPDATE appointment SET appointmentStatus = 'Completed' WHERE apptID = ?`,
+        [apptID]
+      );
+
+      if (updateResult.affectedRows === 0) {
+        await connection.rollback();
+        return res.status(404).json({ message: 'Appointment not found' });
+      }
+
+      // Insert or update feedback
+      await connection.query(
+        `INSERT INTO appointment_feedback (apptID, doctorNotes, requiresSpecialist, specialistType)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         doctorNotes = VALUES(doctorNotes),
+         requiresSpecialist = VALUES(requiresSpecialist),
+         specialistType = VALUES(specialistType)`,
+        [apptID, doctorNotes, requiresSpecialist ? 1 : 0, specialistType || null]
+      );
+
+      await connection.commit();
+      connection.release();
+
+      res.json({ message: 'Appointment completed successfully' });
+    } catch (error) {
+      await connection.rollback();
+      connection.release();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Complete appointment error:', error);
+    res.status(500).json({ message: 'Server error completing appointment' });
+  }
+});
+
+// Cancel appointment
+router.post('/:id/cancel', authenticateToken, authorizeRoles('Doctor', 'Admin', 'Receptionist'), async (req, res) => {
+  try {
     const [result] = await db.query(
-      `UPDATE appointment SET
-        appointmentStatus = 'Completed',
-        appointmentSummary = ?,
-        needsSpecialist = ?,
-        specialistType = ?,
-        completedAt = NOW(),
-        completedBy = ?
-      WHERE apptID = ?`,
-      [appointmentSummary, needsSpecialist ? 1 : 0, specialistType || null, req.user.userID, req.params.id]
+      `UPDATE appointment SET appointmentStatus = 'Cancelled' WHERE apptID = ?`,
+      [req.params.id]
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    res.json({ message: 'Appointment completed successfully' });
+    res.json({ message: 'Appointment cancelled successfully' });
   } catch (error) {
-    console.error('Complete appointment error:', error);
-    res.status(500).json({ message: 'Server error completing appointment' });
+    console.error('Cancel appointment error:', error);
+    res.status(500).json({ message: 'Server error cancelling appointment' });
   }
 });
 
