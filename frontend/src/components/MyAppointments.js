@@ -62,6 +62,15 @@ const MyAppointments = () => {
     setShowDetailsModal(true);
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    // Extract just the date part (YYYY-MM-DD) and format it
+    const datePart = dateString.split('T')[0];
+    const [year, month, day] = datePart.split('-');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Scheduled':
@@ -131,7 +140,7 @@ const MyAppointments = () => {
                 return (
                   <tr key={appt.apptID}>
                     <td>{appt.apptID}</td>
-                    <td>{new Date(appt.appointmentDate).toLocaleDateString()}</td>
+                    <td>{formatDate(appt.appointmentDate)}</td>
                     <td>{appt.appointmentTime}</td>
                     <td>{appt.doctorName || 'Not Assigned'}</td>
                     <td>
@@ -209,7 +218,7 @@ const MyAppointments = () => {
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '0.75rem' }}>
                   <strong>Date:</strong>
-                  <span>{new Date(selectedAppointment.appointmentDate).toLocaleDateString()}</span>
+                  <span>{formatDate(selectedAppointment.appointmentDate)}</span>
 
                   <strong>Time:</strong>
                   <span>{selectedAppointment.appointmentTime}</span>
