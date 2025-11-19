@@ -89,7 +89,7 @@ const LandingPage = () => {
               src="https://images.unsplash.com/photo-1584466990375-7a0fabf76daa?auto=format&fit=crop&w=600&q=60"
               alt="doctor"
             />
-            <h3>Dr. Sarah Thompson</h3>
+            <h3>Dr. John Doctor</h3>
             <p>Senior Ophthalmologist</p>
           </div>
 
@@ -98,8 +98,8 @@ const LandingPage = () => {
               src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=60"
               alt="doctor"
             />
-            <h3>Dr. Michael Reyes</h3>
-            <p>Eye Surgeon</p>
+            <h3>Dr. David Chen</h3>
+            <p>Optometrist</p>
           </div>
 
           <div className="doctor-card fade-up delay-2">
@@ -107,8 +107,8 @@ const LandingPage = () => {
               src="https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=60"
               alt="doctor"
             />
-            <h3>Dr. Lisa Carter</h3>
-            <p>Pediatric Eye Specialist</p>
+            <h3>Dr. Rachel Foster</h3>
+            <p>Pediatric Ophthalmologist</p>
           </div>
         </div>
       </section>
@@ -125,3 +125,4 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
