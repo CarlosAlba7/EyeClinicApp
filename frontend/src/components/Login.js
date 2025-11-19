@@ -46,6 +46,9 @@ const Login = ({ setUser }) => {
 
   return (
     <div className="login-container">
+      <button className="brand-btn" onClick={() => navigate("/LandingPage")}>
+        Eye Clinic
+      </button>
       <div className="login-card">
         <h2>Eye Clinic Management System</h2>
         {error && <div className="alert alert-error">{error}</div>}
