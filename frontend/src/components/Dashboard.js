@@ -165,7 +165,7 @@ const Dashboard = ({ user }) => {
           </div>
         )}
 
-        {(user.employeeType === "Doctor" || user.employeeType === "Admin") && (
+        {(user.employeeType === "Doctor") && (
           <div
             className="dashboard-card"
             style={{
@@ -235,7 +235,7 @@ const Dashboard = ({ user }) => {
           <a href="/appointments" className="btn btn-success">
             Manage Appointments
           </a>
-          {(user.employeeType === "Doctor" || user.employeeType === "Admin") && (
+          {(user.employeeType === "Doctor") && (
             <a
               href="/doctor-alerts"
               className={`btn ${stats.unreadAlerts > 0 ? "btn-danger" : "btn-info"}`}
