@@ -98,7 +98,7 @@ const LandingPage = () => {
               src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=600&q=60"
               alt="doctor"
             />
-            <h3>Dr. David Chen</h3>
+            <h3>Dr. Rachel Foster</h3>
             <p>Optometrist</p>
           </div>
 
@@ -107,7 +107,7 @@ const LandingPage = () => {
               src="https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=60"
               alt="doctor"
             />
-            <h3>Dr. Rachel Foster</h3>
+            <h3>Dr. David Chen</h3>
             <p>Pediatric Ophthalmologist</p>
           </div>
         </div>
@@ -125,4 +125,5 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
 
