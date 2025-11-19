@@ -118,27 +118,25 @@ router.get("/me", async (req, res) => {
     if (decoded.role === "Patient") {
       const [rows] = await db.query(
         `SELECT 
-            p.patientID,
-            p.userID,
-            p.firstName,
-            p.middleInit,
-            p.lastName,
-            p.gender,
-            p.patientBirthdate,
-            p.patientAddress,
-            p.email,
-            p.phone,
-            p.emergencyEmail,
-            p.emergencyPhone,
-            p.visionHistory,
-            p.medHistory,
-            p.insuranceNote,
-            u.role
+          p.patientID,
+          p.firstName, 
+          p.middleInit,
+          p.lastName, 
+          p.email,
+          p.phone,
+          p.gender,
+          p.patientBirthdate,
+          p.patientAddress,
+          u.role
          FROM patient p
          JOIN users u ON p.userID = u.userID
          WHERE p.userID = ?`,
         [decoded.userID]
       );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "Patient profile not found" });
+      }
 
       return res.json(rows[0]);
     }
@@ -169,12 +167,12 @@ router.get("/me", async (req, res) => {
 // PATIENT SIGNUP
 // --------------------------
 router.post("/patient-signup", async (req, res) => {
-  const {
-    firstName,
+  const { 
+    firstName, 
     middleInit,
-    lastName,
-    email,
-    phone,
+    lastName, 
+    email, 
+    phone, 
     password,
     gender,
     patientBirthdate,
@@ -183,11 +181,11 @@ router.post("/patient-signup", async (req, res) => {
 
   try {
     // Validate required fields
-    if (!firstName || !lastName || !email || !password || !gender || !patientBirthdate) {
+    if (!firstName || !lastName || !email || !password || !phone || !gender || !patientBirthdate) {
       return res.status(400).json({ message: "Missing required fields." });
     }
 
-    // Check if email exists
+    // Check if email already exists
     const [existingUser] = await db.query(
       "SELECT userID FROM users WHERE email = ?",
       [email]
@@ -201,45 +199,49 @@ router.post("/patient-signup", async (req, res) => {
     const connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // Insert into users table
-    const [userResult] = await connection.query(
-      `INSERT INTO users (email, passwordHash, role)
-       VALUES (?, ?, 'Patient')`,
-      [email, passwordHash]
-    );
+    try {
+      // Insert into users table
+      const [userResult] = await connection.query(
+        `INSERT INTO users (email, passwordHash, role)
+         VALUES (?, ?, 'Patient')`,
+        [email, passwordHash]
+      );
 
-    const userID = userResult.insertId;
+      const userID = userResult.insertId;
 
-    // Insert into patient table
-    const [patientResult] = await connection.query(
-      `INSERT INTO patient (
-          userID, firstName, middleInit, lastName, gender,
-          patientBirthdate, patientAddress, email, phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+      // Insert into patient table with all fields
+      const [patientResult] = await connection.query(
+        `INSERT INTO patient 
+         (userID, firstName, middleInit, lastName, gender, patientBirthdate, patientAddress, email, phone)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userID, 
+          firstName, 
+          middleInit || null, 
+          lastName, 
+          gender, 
+          patientBirthdate, 
+          patientAddress || null, 
+          email, 
+          phone
+        ]
+      );
+
+      await connection.commit();
+      connection.release();
+
+      return res.status(201).json({
+        message: "Patient account created successfully.",
         userID,
-        firstName,
-        middleInit || null,
-        lastName,
-        gender,
-        patientBirthdate,
-        patientAddress || null,
-        email,
-        phone
-      ]
-    );
-
-    await connection.commit();
-    connection.release();
-
-    return res.status(201).json({
-      message: "Patient account created.",
-      userID,
-      patientID: patientResult.insertId,
-    });
-
+        patientID: patientResult.insertId,
+      });
+    } catch (err) {
+      await connection.rollback();
+      connection.release();
+      throw err;
+    }
   } catch (err) {
-    console.error(err);
+    console.error("Signup error:", err);
     return res.status(500).json({ message: "Server error during signup." });
   }
 });

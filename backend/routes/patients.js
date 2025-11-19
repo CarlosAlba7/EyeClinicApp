@@ -19,6 +19,7 @@ router.get(
            p.patientID,
            p.userID,
            p.firstName,
+           p.middleInit,
            p.lastName,
            p.gender,
            p.email,
@@ -126,7 +127,7 @@ router.post(
         [
           userID,
           firstName,
-          middleInit,
+          middleInit || null,
           lastName,
           gender,
           patientBirthdate,
@@ -150,15 +151,15 @@ router.post(
 );
 
 // ---------------------------------------------------------
-// UPDATE PATIENT (Admin / Staff)
+// UPDATE PATIENT (Admin / Staff / Patient themselves)
 // ---------------------------------------------------------
 router.put(
   "/:id",
   authenticateToken,
-  authorizeRoles("Admin", "Receptionist", "Patient"),
   async (req, res) => {
     try {
       const patientID = req.params.id;
+      const { firstName, middleInit, lastName, email, phone, patientAddress } = req.body;
 
       // Check if patient exists
       const [existing] = await db.query(
@@ -184,24 +185,17 @@ router.put(
         patientAddress
       } = req.body;
 
+      // Update patient table (only editable fields)
       await db.query(
         `UPDATE patient SET 
            firstName=?, 
-           middleInit=?, 
+           middleInit=?,
            lastName=?, 
            email=?, 
            phone=?, 
            patientAddress=?
          WHERE patientID=?`,
-        [
-          firstName,
-          middleInit,
-          lastName,
-          email,
-          phone,
-          patientAddress,
-          patientID
-        ]
+        [firstName, middleInit || null, lastName, email, phone, patientAddress, patientID]
       );
 
       await db.query("UPDATE users SET email=? WHERE userID=?", [
@@ -219,7 +213,7 @@ router.put(
 
 
 // ---------------------------------------------------------
-// DELETE PATIENT (Admin only) — removes both user + patient
+// DELETE PATIENT (Admin only) – removes both user + patient
 // ---------------------------------------------------------
 router.delete(
   "/:id",
