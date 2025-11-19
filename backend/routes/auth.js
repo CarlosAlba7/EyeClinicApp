@@ -114,6 +114,7 @@ router.get("/me", async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // PATIENT
     if (decoded.role === "Patient") {
       const [rows] = await db.query(
         `SELECT 
@@ -140,18 +141,27 @@ router.get("/me", async (req, res) => {
       return res.json(rows[0]);
     }
 
-    // Employee
+    // EMPLOYEE
     const [rows] = await db.query(
-      "SELECT employeeID AS userID, firstName, lastName, email, employeeType AS role FROM employee WHERE employeeID = ?",
+      `SELECT 
+          employeeID AS userID,
+          firstName,
+          lastName,
+          email,
+          employeeType AS role
+       FROM employee 
+       WHERE employeeID = ?`,
       [decoded.userID]
     );
 
     return res.json(rows[0]);
+
   } catch (error) {
     console.error("Get user error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // --------------------------
 // PATIENT SIGNUP
