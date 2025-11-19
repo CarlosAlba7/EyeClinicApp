@@ -1,10 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://eyeclinic-backend.vercel.app/api"
-    : "http://localhost:5000/api";
-
+const API_BASE_URL = process.env.REACT_APP_API_URL ||"http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -56,10 +52,11 @@ export const patientAPI = {
   delete: (id) => api.delete(`/patients/${id}`),
 };
 // Patient Portal API
-// Patient Portal API
 export const patientPortalAPI = {
-  // General info about the logged-in user (employee or patient)
-  getProfile: () => api.get("/auth/me"),
+  // Patient profile (name, email, etc.)
+  getProfile: () => api.get("/patient/me"),
+
+  // All appointments for the logged-in patient
   getMyAppointments: () => api.get("/patient-appointments/my"),
 };
 
@@ -92,19 +89,20 @@ export const invoiceAPI = {
 
 // Reports API
 export const reportAPI = {
-  appointmentStatistics: () => api.get("/reports/appointment-statistics"),
+  appointmentStatistics: (params) => api.get("/reports/appointment-statistics", {params}),
   revenueByMonth: () => api.get("/reports/revenue-by-month"),
   employeePerformance: () => api.get("/reports/employee-performance"),
   patientDemographics: () => api.get("/reports/patient-demographics"),
-  patientsByCondition: (condition) =>
-    api.get("/reports/patients-by-condition", { params: { condition } }),
-  appointmentsByDateRange: (startDate, endDate) =>
+  patientsByCondition: ({ gender = "", minAge = "", maxAge = "" }) =>
+    api.get("/reports/patients-by-condition", { params: { gender, minAge, maxAge } }),
+  appointmentsByDateRange: (startDate, endDate, employeeID, status) =>
     api.get("/reports/appointments-by-date-range", {
-      params: { startDate, endDate },
+      params: { startDate, endDate, employeeID, status },
     }),
   outstandingInvoices: () => api.get("/reports/outstanding-invoices"),
   doctorWorkload: (month, year) =>
     api.get("/reports/doctor-workload", { params: { month, year } }),
+  getDoctors: () => api.get("/reports/doctors"),
 };
 
 export default api;
