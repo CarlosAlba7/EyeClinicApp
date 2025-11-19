@@ -369,6 +369,7 @@ const Appointments = ({ user }) => {
                   value={formData.patientID}
                   onChange={handleInputChange}
                   required
+                  disabled={user.employeeType === 'Doctor'}
                 >
                   <option value="">Select Patient</option>
                   {patients.map((patient) => (
@@ -385,6 +386,7 @@ const Appointments = ({ user }) => {
                   className="form-control"
                   value={formData.employeeID}
                   onChange={handleInputChange}
+                  disabled={user.employeeType === 'Doctor'}
                 >
                   <option value="">Select Doctor</option>
                   {employees.map((employee) => (

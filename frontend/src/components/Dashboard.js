@@ -208,12 +208,6 @@ const Dashboard = ({ user }) => {
               )}
             </a>
           )}
-          {(user.employeeType === "Admin" ||
-            user.employeeType === "Receptionist") && (
-            <a href="/invoices" className="btn btn-warning">
-              View Invoices
-            </a>
-          )}
           {user.employeeType === "Admin" && (
             <>
               <a href="/reports" className="btn btn-secondary">
