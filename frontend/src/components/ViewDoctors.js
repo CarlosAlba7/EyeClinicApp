@@ -37,9 +37,18 @@ const ViewDoctors = () => {
     <div className="container">
       <div className="page-header">
         <h1>Our Doctors</h1>
-        <button onClick={() => navigate('/patient-dashboard')} className="btn btn-secondary">
-          Back to Dashboard
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button
+            onClick={() => navigate('/book')}
+            className="btn btn-primary"
+            style={{ fontSize: '1rem', padding: '0.75rem 2rem' }}
+          >
+            Book Appointment
+          </button>
+          <button onClick={() => navigate('/patient-dashboard')} className="btn btn-secondary">
+            Back to Dashboard
+          </button>
+        </div>
       </div>
 
       {message.text && (
@@ -91,8 +100,8 @@ const ViewDoctors = () => {
                 {doctor.specialization || 'General Ophthalmologist'}
               </p>
 
-              <div style={{ 
-                borderTop: '1px solid #ecf0f1', 
+              <div style={{
+                borderTop: '1px solid #ecf0f1',
                 paddingTop: '1rem',
                 fontSize: '0.9rem',
                 color: '#7f8c8d'
@@ -102,27 +111,19 @@ const ViewDoctors = () => {
                     <strong>Experience:</strong> {doctor.yearsExperience} years
                   </p>
                 )}
-                
+
                 {doctor.email && (
                   <p style={{ marginBottom: '0.5rem' }}>
                     <strong>Email:</strong> {doctor.email}
                   </p>
                 )}
-                
+
                 {doctor.phone && (
                   <p style={{ marginBottom: '0.5rem' }}>
                     <strong>Phone:</strong> {doctor.phone}
                   </p>
                 )}
               </div>
-
-              <button 
-                onClick={() => navigate('/book')}
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '1rem' }}
-              >
-                Book Appointment
-              </button>
             </div>
           ))}
         </div>
