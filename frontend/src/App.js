@@ -17,6 +17,7 @@ import Appointments from "./components/Appointments";
 import Employees from "./components/Employees";
 import Invoices from "./components/Invoices";
 import Reports from "./components/Reports";
+import EmployeeManagement from "./components/EmployeeManagement";
 import PatientDashboard from "./components/PatientDashboard";
 import BookAppointment from "./components/BookAppointment";
 import MyAppointments from "./components/MyAppointments";
@@ -178,7 +179,24 @@ function App() {
 
           <Route
             path="/reports"
-            element={user ? <Reports user={user} /> : <Navigate to="/login" />}
+            element={
+              user && user.employeeType === "Admin" ? (
+                <Reports user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          <Route
+            path="/employee-management"
+            element={
+              user && user.employeeType === "Admin" ? (
+                <EmployeeManagement user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
           />
 
           {/* Doctor Alerts Route */}

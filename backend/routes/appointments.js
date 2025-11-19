@@ -6,7 +6,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 // Get all appointments with patient and employee details
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { status, date, patientID } = req.query;
+    const { status, date, patientID, employeeID } = req.query;
 
     let query = `
       SELECT
@@ -24,7 +24,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN employee e ON a.employeeID = e.employeeID
       LEFT JOIN appointment_feedback af ON a.apptID = af.apptID
     `;
-    
+
     let params = [];
     const conditions = [];
 
@@ -34,13 +34,18 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     if (date) {
-      conditions.push('a.appointmentDate = ?');
+      conditions.push('DATE(a.appointmentDate) = ?');
       params.push(date);
     }
 
     if (patientID) {
       conditions.push('a.patientID = ?');
-      params.push(patientID);
+      params.push(parseInt(patientID));
+    }
+
+    if (employeeID) {
+      conditions.push('a.employeeID = ?');
+      params.push(parseInt(employeeID));
     }
 
     if (conditions.length > 0) {
