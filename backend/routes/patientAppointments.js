@@ -11,12 +11,25 @@ router.get(
   async (req, res) => {
     try {
       const [rows] = await db.query(
-        `SELECT a.*, CONCAT(e.firstName, ' ', e.lastName) AS doctorName
-       FROM appointment a
-       LEFT JOIN employee e ON a.employeeID = e.employeeID
-       JOIN patient p ON a.patientID = p.patientID
-       WHERE p.userID = ?
-       ORDER BY a.appointmentDate DESC`,
+        `SELECT
+          a.apptID,
+          a.appointmentDate,
+          a.appointmentTime,
+          a.appointmentStatus,
+          a.reason,
+          a.appointmentSummary,
+          a.needsSpecialist,
+          a.specialistType,
+          a.completedAt,
+          CONCAT(e.firstName, ' ', e.lastName) AS doctorName,
+          e.specialization,
+          CONCAT(completedByEmp.firstName, ' ', completedByEmp.lastName) as completedByName
+        FROM appointment a
+        LEFT JOIN employee e ON a.employeeID = e.employeeID
+        LEFT JOIN employee completedByEmp ON a.completedBy = completedByEmp.employeeID
+        JOIN patient p ON a.patientID = p.patientID
+        WHERE p.userID = ?
+        ORDER BY a.appointmentDate DESC, a.appointmentTime DESC`,
         [req.user.userID]
       );
       res.json(rows);
@@ -36,6 +49,11 @@ router.post(
     try {
       const { employeeID, appointmentDate, appointmentTime, reason } = req.body;
 
+      // Validate required fields
+      if (!employeeID || !appointmentDate || !appointmentTime || !reason) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
       // Get patient ID from userID
       const [[patient]] = await db.query(
         `SELECT patientID FROM patient WHERE userID = ?`,
@@ -46,10 +64,17 @@ router.post(
         return res.status(404).json({ message: "Patient profile missing" });
       }
 
+      // Check if the appointment time is in the future
+      const appointmentDateTime = new Date(`${appointmentDate} ${appointmentTime}`);
+      if (appointmentDateTime < new Date()) {
+        return res.status(400).json({ message: "Cannot book appointments in the past" });
+      }
+
+      // Insert appointment
       const [result] = await db.query(
         `INSERT INTO appointment 
-       (patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason)
-       VALUES (?, ?, ?, ?, 'Scheduled', ?)`,
+        (patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason)
+        VALUES (?, ?, ?, ?, 'Scheduled', ?)`,
         [
           patient.patientID,
           employeeID,
@@ -59,12 +84,15 @@ router.post(
         ]
       );
 
-      res.json({ message: "Appointment booked!", apptID: result.insertId });
+      res.status(201).json({ 
+        message: "Appointment booked successfully!", 
+        apptID: result.insertId 
+      });
     } catch (err) {
       console.error("Booking error:", err);
-      res
-        .status(500)
-        .json({ message: "Server error while booking appointment" });
+      res.status(500).json({ 
+        message: "Server error while booking appointment" 
+      });
     }
   }
 );
@@ -76,13 +104,34 @@ router.put(
   authorizeRoles("Patient"),
   async (req, res) => {
     try {
+      // First verify that this appointment belongs to the logged-in patient
+      const [[appointment]] = await db.query(
+        `SELECT a.apptID 
+         FROM appointment a
+         JOIN patient p ON a.patientID = p.patientID
+         WHERE a.apptID = ? AND p.userID = ?`,
+        [req.params.id, req.user.userID]
+      );
+
+      if (!appointment) {
+        return res.status(404).json({ 
+          message: "Appointment not found or you don't have permission to cancel it" 
+        });
+      }
+
+      // Update the appointment status
       const [result] = await db.query(
         `UPDATE appointment 
-       SET appointmentStatus='Cancelled'
-       WHERE apptID = ?`,
+         SET appointmentStatus='Cancelled'
+         WHERE apptID = ?`,
         [req.params.id]
       );
-      res.json({ message: "Appointment cancelled" });
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      res.json({ message: "Appointment cancelled successfully" });
     } catch (err) {
       console.error("Cancel error:", err);
       res.status(500).json({ message: "Server error" });

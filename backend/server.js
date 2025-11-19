@@ -26,6 +26,8 @@ const employeeRoutes = require('./routes/employees');
 const appointmentRoutes = require('./routes/appointments');
 const invoiceRoutes = require('./routes/invoices');
 const reportRoutes = require('./routes/reports');
+const patientAppointmentRoutes = require('./routes/patientAppointments');
+const shopRoutes = require('./routes/shop');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -34,6 +36,8 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/patient-appointments', patientAppointmentRoutes);
+app.use('/api/shop', shopRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

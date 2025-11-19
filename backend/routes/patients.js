@@ -19,6 +19,7 @@ router.get(
            p.patientID,
            p.userID,
            p.firstName,
+           p.middleInit,
            p.lastName,
            p.gender,
            p.email,
@@ -126,7 +127,7 @@ router.post(
         [
           userID,
           firstName,
-          middleInit,
+          middleInit || null,
           lastName,
           gender,
           patientBirthdate,
@@ -150,17 +151,15 @@ router.post(
 );
 
 // ---------------------------------------------------------
-// UPDATE PATIENT (Admin / Staff)
+// UPDATE PATIENT (Admin / Staff / Patient themselves)
 // ---------------------------------------------------------
 router.put(
   "/:id",
   authenticateToken,
-  authorizeRoles("Admin", "Receptionist"),
   async (req, res) => {
     try {
       const patientID = req.params.id;
-      const { firstName, lastName, gender, email, phone, patientBirthdate } =
-        req.body;
+      const { firstName, middleInit, lastName, email, phone, patientAddress } = req.body;
 
       // Ensure patient exists
       const [existing] = await db.query(
@@ -174,17 +173,17 @@ router.put(
 
       const userID = existing[0].userID;
 
-      // Update patient table
+      // Update patient table (only editable fields)
       await db.query(
         `UPDATE patient SET 
            firstName=?, 
+           middleInit=?,
            lastName=?, 
-           gender=?,
            email=?, 
            phone=?, 
-           patientBirthdate=?
+           patientAddress=?
          WHERE patientID=?`,
-        [firstName, lastName, gender, email, phone, patientBirthdate, patientID]
+        [firstName, middleInit || null, lastName, email, phone, patientAddress, patientID]
       );
 
       // Update users table email
@@ -202,7 +201,7 @@ router.put(
 );
 
 // ---------------------------------------------------------
-// DELETE PATIENT (Admin only) — removes both user + patient
+// DELETE PATIENT (Admin only) – removes both user + patient
 // ---------------------------------------------------------
 router.delete(
   "/:id",
