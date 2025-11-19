@@ -26,6 +26,7 @@ import Shop from "./components/Shop";
 import Cart from "./components/Cart";
 import Checkout from "./components/Checkout";
 import ShopManagement from "./components/ShopManagement";
+import DoctorAlerts from "./components/DoctorAlerts";
 
 const getRole = (user) => user?.role || user?.employeeType;
 
@@ -178,6 +179,18 @@ function App() {
           <Route
             path="/reports"
             element={user ? <Reports user={user} /> : <Navigate to="/login" />}
+          />
+
+          {/* Doctor Alerts Route */}
+          <Route
+            path="/doctor-alerts"
+            element={
+              user && (user.employeeType === "Doctor" || user.employeeType === "Admin") ? (
+                <DoctorAlerts user={user} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
           />
 
           {/* Shop Routes */}

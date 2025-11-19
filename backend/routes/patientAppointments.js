@@ -17,6 +17,7 @@ router.get(
           a.appointmentTime,
           a.appointmentStatus,
           a.reason,
+          a.appointmentType,
           CONCAT(e.firstName, ' ', e.lastName) AS doctorName,
           e.specialization,
           af.doctorNotes,
@@ -45,7 +46,7 @@ router.post(
   authorizeRoles("Patient"),
   async (req, res) => {
     try {
-      const { employeeID, appointmentDate, appointmentTime, reason } = req.body;
+      const { employeeID, appointmentDate, appointmentTime, reason, appointmentType } = req.body;
 
       // Validate required fields
       if (!employeeID || !appointmentDate || !appointmentTime || !reason) {
@@ -70,26 +71,27 @@ router.post(
 
       // Insert appointment
       const [result] = await db.query(
-        `INSERT INTO appointment 
-        (patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason)
-        VALUES (?, ?, ?, ?, 'Scheduled', ?)`,
+        `INSERT INTO appointment
+        (patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason, appointmentType)
+        VALUES (?, ?, ?, ?, 'Scheduled', ?, ?)`,
         [
           patient.patientID,
           employeeID,
           appointmentDate,
           appointmentTime,
           reason,
+          appointmentType || 'Normal',
         ]
       );
 
-      res.status(201).json({ 
-        message: "Appointment booked successfully!", 
-        apptID: result.insertId 
+      res.status(201).json({
+        message: "Appointment booked successfully!",
+        apptID: result.insertId
       });
     } catch (err) {
       console.error("Booking error:", err);
-      res.status(500).json({ 
-        message: "Server error while booking appointment" 
+      res.status(500).json({
+        message: "Server error while booking appointment"
       });
     }
   }

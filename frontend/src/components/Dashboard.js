@@ -4,6 +4,7 @@ import {
   appointmentAPI,
   employeeAPI,
   invoiceAPI,
+  doctorAlertsAPI,
 } from "../services/api";
 
 const Dashboard = ({ user }) => {
@@ -13,6 +14,7 @@ const Dashboard = ({ user }) => {
     todayAppointments: 0,
     totalEmployees: 0,
     pendingInvoices: 0,
+    unreadAlerts: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -24,14 +26,24 @@ const Dashboard = ({ user }) => {
     try {
       const today = new Date().toISOString().split("T")[0];
 
-      const [patients, appointments, todayAppts, employees, invoices] =
-        await Promise.all([
-          patientAPI.getAll(),
-          appointmentAPI.getAll(),
-          appointmentAPI.getAll({ date: today }),
-          employeeAPI.getAll(),
-          invoiceAPI.getAll({ status: "Pending" }),
-        ]);
+      // Fetch alerts count only for doctors and admins
+      const isDoctor = user.employeeType === 'Doctor' || user.employeeType === 'Admin';
+
+      const promises = [
+        patientAPI.getAll(),
+        appointmentAPI.getAll(),
+        appointmentAPI.getAll({ date: today }),
+        employeeAPI.getAll(),
+        invoiceAPI.getAll({ status: "Pending" }),
+      ];
+
+      if (isDoctor) {
+        promises.push(doctorAlertsAPI.getUnreadCount());
+      }
+
+      const results = await Promise.all(promises);
+
+      const [patients, appointments, todayAppts, employees, invoices, alertsData] = results;
 
       setStats({
         totalPatients: patients.data.length,
@@ -39,6 +51,7 @@ const Dashboard = ({ user }) => {
         todayAppointments: todayAppts.data.length,
         totalEmployees: employees.data.length,
         pendingInvoices: invoices.data.length,
+        unreadAlerts: isDoctor && alertsData ? alertsData.data.unreadCount : 0,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -119,6 +132,36 @@ const Dashboard = ({ user }) => {
             <p>Pending Invoices</p>
           </div>
         )}
+
+        {(user.employeeType === "Doctor" || user.employeeType === "Admin") && (
+          <div
+            className="dashboard-card"
+            style={{
+              background: stats.unreadAlerts > 0
+                ? "linear-gradient(135deg, #ff0844 0%, #ffb199 100%)"
+                : "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+              cursor: "pointer",
+              position: "relative",
+              animation: stats.unreadAlerts > 0 ? "pulse 2s infinite" : "none",
+            }}
+            onClick={() => (window.location.href = "/doctor-alerts")}
+          >
+            {stats.unreadAlerts > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "10px",
+                  fontSize: "2rem",
+                }}
+              >
+                🚨
+              </div>
+            )}
+            <h3>{stats.unreadAlerts}</h3>
+            <p>{stats.unreadAlerts > 0 ? "Unread Alerts!" : "No Alerts"}</p>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -130,6 +173,41 @@ const Dashboard = ({ user }) => {
           <a href="/appointments" className="btn btn-success">
             Manage Appointments
           </a>
+          {(user.employeeType === "Doctor" || user.employeeType === "Admin") && (
+            <a
+              href="/doctor-alerts"
+              className={`btn ${stats.unreadAlerts > 0 ? "btn-danger" : "btn-info"}`}
+              style={{
+                position: "relative",
+                fontWeight: stats.unreadAlerts > 0 ? "700" : "normal",
+              }}
+            >
+              {stats.unreadAlerts > 0 ? "🚨 " : ""}
+              View Alerts
+              {stats.unreadAlerts > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-8px",
+                    right: "-8px",
+                    backgroundColor: "#fff",
+                    color: "#dc3545",
+                    borderRadius: "50%",
+                    width: "24px",
+                    height: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.75rem",
+                    fontWeight: "700",
+                    border: "2px solid #dc3545",
+                  }}
+                >
+                  {stats.unreadAlerts}
+                </span>
+              )}
+            </a>
+          )}
           {(user.employeeType === "Admin" ||
             user.employeeType === "Receptionist") && (
             <a href="/invoices" className="btn btn-warning">
@@ -144,6 +222,19 @@ const Dashboard = ({ user }) => {
           </a>
         </div>
       </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.9;
+            transform: scale(1.02);
+          }
+        }
+      `}</style>
     </div>
   );
 };

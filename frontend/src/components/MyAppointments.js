@@ -119,6 +119,7 @@ const MyAppointments = () => {
                 <th>Date</th>
                 <th>Time</th>
                 <th>Doctor</th>
+                <th>Type</th>
                 <th>Reason</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -133,6 +134,22 @@ const MyAppointments = () => {
                     <td>{new Date(appt.appointmentDate).toLocaleDateString()}</td>
                     <td>{appt.appointmentTime}</td>
                     <td>{appt.doctorName || 'Not Assigned'}</td>
+                    <td>
+                      <span
+                        style={{
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '4px',
+                          backgroundColor:
+                            appt.appointmentType === 'Emergency' ? '#dc3545' :
+                            appt.appointmentType === 'Checkup' ? '#17a2b8' : '#6c757d',
+                          color: '#fff',
+                          fontWeight: appt.appointmentType === 'Emergency' ? '700' : '500',
+                        }}
+                      >
+                        {appt.appointmentType === 'Emergency' && '🚨 '}
+                        {appt.appointmentType || 'Normal'}
+                      </span>
+                    </td>
                     <td>{appt.reason || '-'}</td>
                     <td>
                       <span
@@ -199,6 +216,21 @@ const MyAppointments = () => {
 
                   <strong>Doctor:</strong>
                   <span>{selectedAppointment.doctorName || 'Not Assigned'}</span>
+
+                  <strong>Type:</strong>
+                  <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '4px',
+                    backgroundColor:
+                      selectedAppointment.appointmentType === 'Emergency' ? '#dc3545' :
+                      selectedAppointment.appointmentType === 'Checkup' ? '#17a2b8' : '#6c757d',
+                    color: '#fff',
+                    fontWeight: selectedAppointment.appointmentType === 'Emergency' ? '700' : '500',
+                    display: 'inline-block'
+                  }}>
+                    {selectedAppointment.appointmentType === 'Emergency' && '🚨 '}
+                    {selectedAppointment.appointmentType || 'Normal'}
+                  </span>
 
                   <strong>Reason:</strong>
                   <span>{selectedAppointment.reason || '-'}</span>

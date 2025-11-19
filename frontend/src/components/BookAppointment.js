@@ -15,6 +15,7 @@ const BookAppointment = () => {
     appointmentDate: '',
     appointmentTime: '',
     reason: '',
+    appointmentType: 'Normal',
   });
   const navigate = useNavigate();
 
@@ -67,6 +68,7 @@ const BookAppointment = () => {
         appointmentDate: '',
         appointmentTime: '',
         reason: '',
+        appointmentType: 'Normal',
       });
 
       // Redirect after 2 seconds
@@ -137,6 +139,26 @@ const BookAppointment = () => {
           </div>
 
           <div className="form-group">
+            <label>Appointment Type *</label>
+            <select
+              name="appointmentType"
+              className="form-control"
+              value={formData.appointmentType}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="Normal">Normal Appointment</option>
+              <option value="Checkup">Regular Checkup</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+            {formData.appointmentType === 'Emergency' && (
+              <small style={{ color: '#dc3545', display: 'block', marginTop: '0.5rem' }}>
+                ⚠️ Emergency appointments will be prioritized and your assigned doctor will be immediately notified.
+              </small>
+            )}
+          </div>
+
+          <div className="form-group">
             <label>Reason for Visit *</label>
             <textarea
               name="reason"
@@ -150,8 +172,11 @@ const BookAppointment = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <button type="submit" className="btn btn-primary">
-              Book Appointment
+            <button
+              type="submit"
+              className={`btn ${formData.appointmentType === 'Emergency' ? 'btn-danger' : 'btn-primary'}`}
+            >
+              {formData.appointmentType === 'Emergency' ? '🚨 Book Emergency Appointment' : 'Book Appointment'}
             </button>
             <button
               type="button"

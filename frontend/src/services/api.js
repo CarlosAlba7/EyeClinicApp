@@ -126,4 +126,14 @@ export const shopAPI = {
   updateOrderStatus: (orderID, status) => api.put(`/shop/orders/${orderID}/status`, { status }),
 };
 
+// Doctor Alerts API
+export const doctorAlertsAPI = {
+  getMyAlerts: () => api.get("/doctor-alerts/my"),
+  getUnreadCount: () => api.get("/doctor-alerts/unread-count"),
+  markAsRead: (id) => api.put(`/doctor-alerts/${id}/mark-read`),
+  markAllAsRead: () => api.put("/doctor-alerts/mark-all-read"),
+  deleteAlert: (id) => api.delete(`/doctor-alerts/${id}`),
+  getEmergencyAlerts: () => api.get("/doctor-alerts/emergency"),
+};
+
 export default api;

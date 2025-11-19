@@ -19,6 +19,7 @@ const Appointments = ({ user }) => {
     appointmentTime: '',
     appointmentStatus: 'Scheduled',
     reason: '',
+    appointmentType: 'Normal',
   });
   const [completionData, setCompletionData] = useState({
     doctorNotes: '',
@@ -84,6 +85,7 @@ const Appointments = ({ user }) => {
       appointmentTime: appointment.appointmentTime || '',
       appointmentStatus: appointment.appointmentStatus || 'Scheduled',
       reason: appointment.reason || '',
+      appointmentType: appointment.appointmentType || 'Normal',
     });
     setShowModal(true);
   };
@@ -108,6 +110,7 @@ const Appointments = ({ user }) => {
       appointmentTime: '',
       appointmentStatus: 'Scheduled',
       reason: '',
+      appointmentType: 'Normal',
     });
     setEditingAppointment(null);
   };
@@ -204,6 +207,7 @@ const Appointments = ({ user }) => {
               <th>Doctor</th>
               <th>Date</th>
               <th>Time</th>
+              <th>Type</th>
               <th>Status</th>
               <th>Reason</th>
               {canEdit && <th>Actions</th>}
@@ -221,11 +225,25 @@ const Appointments = ({ user }) => {
                   <span style={{
                     padding: '0.25rem 0.5rem',
                     borderRadius: '4px',
-                    backgroundColor: 
+                    backgroundColor:
+                      appointment.appointmentType === 'Emergency' ? '#dc3545' :
+                      appointment.appointmentType === 'Checkup' ? '#17a2b8' : '#6c757d',
+                    color: '#fff',
+                    fontWeight: appointment.appointmentType === 'Emergency' ? '700' : '500',
+                  }}>
+                    {appointment.appointmentType === 'Emergency' && '🚨 '}
+                    {appointment.appointmentType || 'Normal'}
+                  </span>
+                </td>
+                <td>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px',
+                    backgroundColor:
                       appointment.appointmentStatus === 'Completed' ? '#d4edda' :
                       appointment.appointmentStatus === 'Scheduled' ? '#d1ecf1' :
                       appointment.appointmentStatus === 'Cancelled' ? '#f8d7da' : '#fff3cd',
-                    color: 
+                    color:
                       appointment.appointmentStatus === 'Completed' ? '#155724' :
                       appointment.appointmentStatus === 'Scheduled' ? '#0c5460' :
                       appointment.appointmentStatus === 'Cancelled' ? '#721c24' : '#856404',
@@ -351,6 +369,19 @@ const Appointments = ({ user }) => {
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
                   <option value="No-Show">No-Show</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Appointment Type</label>
+                <select
+                  name="appointmentType"
+                  className="form-control"
+                  value={formData.appointmentType}
+                  onChange={handleInputChange}
+                >
+                  <option value="Normal">Normal</option>
+                  <option value="Checkup">Checkup</option>
+                  <option value="Emergency">Emergency</option>
                 </select>
               </div>
               <div className="form-group">

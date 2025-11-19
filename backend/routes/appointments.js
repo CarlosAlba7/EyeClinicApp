@@ -94,15 +94,15 @@ router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), asy
   try {
     const {
       patientID, employeeID, appointmentDate, appointmentTime,
-      appointmentStatus, reason
+      appointmentStatus, reason, appointmentType
     } = req.body;
 
     const [result] = await db.query(
       `INSERT INTO appointment (
         patientID, employeeID, appointmentDate, appointmentTime,
-        appointmentStatus, reason
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-      [patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason]
+        appointmentStatus, reason, appointmentType
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [patientID, employeeID, appointmentDate, appointmentTime, appointmentStatus, reason, appointmentType || 'Normal']
     );
 
     res.status(201).json({
@@ -120,16 +120,16 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin', 'Receptionist', 'D
   try {
     const {
       patientID, employeeID, appointmentDate, appointmentTime,
-      appointmentStatus, reason
+      appointmentStatus, reason, appointmentType
     } = req.body;
 
     const [result] = await db.query(
       `UPDATE appointment SET
         patientID = ?, employeeID = ?, appointmentDate = ?,
-        appointmentTime = ?, appointmentStatus = ?, reason = ?
+        appointmentTime = ?, appointmentStatus = ?, reason = ?, appointmentType = ?
       WHERE apptID = ?`,
-      [patientID, employeeID, appointmentDate, appointmentTime, 
-       appointmentStatus, reason, req.params.id]
+      [patientID, employeeID, appointmentDate, appointmentTime,
+       appointmentStatus, reason, appointmentType || 'Normal', req.params.id]
     );
 
     if (result.affectedRows === 0) {

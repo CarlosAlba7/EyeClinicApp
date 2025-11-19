@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: eyeclinic-mysql-eyeclinic.e.aivencloud.com    Database: defaultdb
+-- Host: metro.proxy.rlwy.net    Database: railway
 -- ------------------------------------------------------
--- Server version	8.0.35
+-- Server version	9.4.0
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,15 +14,6 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
-SET @@SESSION.SQL_LOG_BIN= 0;
-
---
--- GTID state at the beginning of the backup 
---
-
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '6e818e22-b3a9-11f0-b1b8-862ccfb0545b:1-142,
-f76d7e1a-c3de-11f0-8d46-862ccfb0288b:1-29';
 
 --
 -- Table structure for table `appointment`
@@ -39,12 +30,20 @@ CREATE TABLE `appointment` (
   `appointmentTime` time NOT NULL,
   `appointmentStatus` varchar(40) DEFAULT NULL,
   `reason` text,
+  `appointmentType` enum('Normal','Checkup','Emergency') NOT NULL DEFAULT 'Normal',
+  `appointmentSummary` text COMMENT 'Doctor summary of what happened during appointment',
+  `needsSpecialist` tinyint(1) DEFAULT '0' COMMENT 'Whether patient needs to see a specialist',
+  `specialistType` varchar(120) DEFAULT NULL COMMENT 'Type of specialist needed',
+  `completedAt` datetime DEFAULT NULL COMMENT 'When the appointment was marked as complete',
+  `completedBy` int DEFAULT NULL COMMENT 'Doctor who completed the appointment',
   PRIMARY KEY (`apptID`),
   KEY `fk_appt_patient` (`patientID`),
   KEY `fk_appt_employee` (`employeeID`),
+  KEY `fk_appt_completed_by` (`completedBy`),
+  CONSTRAINT `fk_appt_completed_by` FOREIGN KEY (`completedBy`) REFERENCES `employee` (`employeeID`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_appt_employee` FOREIGN KEY (`employeeID`) REFERENCES `employee` (`employeeID`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_appt_patient` FOREIGN KEY (`patientID`) REFERENCES `patient` (`patientID`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -53,8 +52,162 @@ CREATE TABLE `appointment` (
 
 LOCK TABLES `appointment` WRITE;
 /*!40000 ALTER TABLE `appointment` DISABLE KEYS */;
-INSERT INTO `appointment` VALUES (1,10,2,'2025-10-27','23:53:00','Completed',''),(2,9,2,'2025-10-29','12:00:00','Scheduled','safasd'),(3,5,2,'2003-01-05','22:56:00','Scheduled',''),(4,11,2,'2025-11-06','21:54:00','Scheduled','Need eyes checked');
+INSERT INTO `appointment` VALUES (1,10,2,'2025-10-27','23:53:00','Completed','','Normal',NULL,0,NULL,NULL,NULL),(2,9,2,'2025-10-29','12:00:00','Scheduled','safasd','Normal',NULL,0,NULL,NULL,NULL),(3,5,2,'2003-01-05','22:56:00','Scheduled','','Normal',NULL,0,NULL,NULL,NULL),(4,11,2,'2025-11-06','21:54:00','Completed','Need eyes checked','Normal','Gave eye drops for pain.',1,'Retinal Specialist','2025-11-18 22:47:50',2),(5,24,2,'2025-11-18','14:00:00','Cancelled','eye hurts','Normal',NULL,0,NULL,NULL,NULL),(6,22,2,'2025-11-18','17:00:00','Completed','eye swelling','Normal','Gave some eye drops and patient was fine. see some glaucoma',1,'Glaucoma specialist','2025-11-18 22:50:03',2),(7,22,2,'2025-11-18','17:00:00','Scheduled','easeaesa','Normal',NULL,0,NULL,NULL,NULL),(8,26,2,'2025-11-18','17:00:00','Completed','asdsadas','Normal','Eye was twitching bad',1,'Retinal Specialist','2025-11-18 23:00:48',2),(9,29,2,'2025-11-19','12:00:00','Scheduled','asdasd','Normal',NULL,0,NULL,NULL,NULL),(10,29,2,'2025-11-19','12:30:00','Completed','asdas','Normal',NULL,0,NULL,NULL,NULL),(11,29,2,'2025-11-19','12:00:00','Scheduled','emergency glue in eye','Emergency',NULL,0,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `appointment` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `emergency_appointment_update` AFTER UPDATE ON `appointment` FOR EACH ROW BEGIN
+  DECLARE patientName VARCHAR(150);
+  DECLARE alertExists INT;
+
+  -- Appointment type changed to Emergency
+  IF NEW.appointmentType = 'Emergency' AND OLD.appointmentType != 'Emergency' AND NEW.employeeID IS NOT NULL THEN
+    -- Get patient name
+    SELECT CONCAT(firstName, ' ', lastName) INTO patientName
+    FROM patient WHERE patientID = NEW.patientID;
+
+    -- Check if alert already exists
+    SELECT COUNT(*) INTO alertExists FROM doctor_alerts WHERE apptID = NEW.apptID AND alertType = 'EMERGENCY';
+
+    IF alertExists = 0 THEN
+      INSERT INTO doctor_alerts (
+        doctorID,
+        patientID,
+        apptID,
+        alertType,
+        alertMessage,
+        isRead
+      ) VALUES (
+        NEW.employeeID,
+        NEW.patientID,
+        NEW.apptID,
+        'EMERGENCY',
+        CONCAT('EMERGENCY: ', patientName, ' - ', NEW.reason, ' - ', DATE_FORMAT(NEW.appointmentDate, '%M %d, %Y'), ' at ', TIME_FORMAT(NEW.appointmentTime, '%h:%i %p')),
+        FALSE
+      );
+    END IF;
+  END IF;
+
+  -- If Doctor assigned to an existing Emergency appointment
+  IF NEW.appointmentType = 'Emergency' AND NEW.employeeID IS NOT NULL AND (OLD.employeeID IS NULL OR OLD.employeeID != NEW.employeeID) THEN
+    -- Get patient name
+    SELECT CONCAT(firstName, ' ', lastName) INTO patientName
+    FROM patient WHERE patientID = NEW.patientID;
+
+    -- Delete old alert if doctor changed
+    IF OLD.employeeID IS NOT NULL THEN
+      DELETE FROM doctor_alerts WHERE apptID = NEW.apptID AND doctorID = OLD.employeeID;
+    END IF;
+
+    -- Check if alert already exists for new doctor
+    SELECT COUNT(*) INTO alertExists FROM doctor_alerts WHERE apptID = NEW.apptID AND doctorID = NEW.employeeID AND alertType = 'EMERGENCY';
+
+    -- Create new alert for newly assigned doctor
+    IF alertExists = 0 THEN
+      INSERT INTO doctor_alerts (
+        doctorID,
+        patientID,
+        apptID,
+        alertType,
+        alertMessage,
+        isRead
+      ) VALUES (
+        NEW.employeeID,
+        NEW.patientID,
+        NEW.apptID,
+        'EMERGENCY',
+        CONCAT('EMERGENCY: ', patientName, ' - ', NEW.reason, ' - ', DATE_FORMAT(NEW.appointmentDate, '%M %d, %Y'), ' at ', TIME_FORMAT(NEW.appointmentTime, '%h:%i %p')),
+        FALSE
+      );
+    END IF;
+  END IF;
+
+  -- If Appointment changed from Emergency to non-Emergency - remove alert
+  IF OLD.appointmentType = 'Emergency' AND NEW.appointmentType != 'Emergency' THEN
+    DELETE FROM doctor_alerts WHERE apptID = NEW.apptID AND alertType = 'EMERGENCY';
+  END IF;
+
+  -- If Appointment status changed to Completed or Cancelled - mark alert as read
+  IF (NEW.appointmentStatus = 'Completed' OR NEW.appointmentStatus = 'Cancelled')
+     AND (OLD.appointmentStatus != 'Completed' AND OLD.appointmentStatus != 'Cancelled') THEN
+    UPDATE doctor_alerts SET isRead = TRUE WHERE apptID = NEW.apptID;
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `appointment_feedback`
+--
+
+DROP TABLE IF EXISTS `appointment_feedback`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `appointment_feedback` (
+  `feedbackID` int NOT NULL AUTO_INCREMENT,
+  `apptID` int NOT NULL,
+  `doctorNotes` text,
+  `requiresSpecialist` tinyint(1) DEFAULT '0',
+  `specialistType` varchar(100) DEFAULT NULL,
+  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`feedbackID`),
+  KEY `apptID` (`apptID`),
+  CONSTRAINT `appointment_feedback_ibfk_1` FOREIGN KEY (`apptID`) REFERENCES `appointment` (`apptID`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `appointment_feedback`
+--
+
+LOCK TABLES `appointment_feedback` WRITE;
+/*!40000 ALTER TABLE `appointment_feedback` DISABLE KEYS */;
+INSERT INTO `appointment_feedback` VALUES (1,10,'just needed some water',1,'Ophthalmologist','2025-11-19 05:00:11','2025-11-19 05:00:11');
+/*!40000 ALTER TABLE `appointment_feedback` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cart`
+--
+
+DROP TABLE IF EXISTS `cart`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cart` (
+  `cartID` int NOT NULL AUTO_INCREMENT,
+  `userID` int NOT NULL,
+  `itemID` int NOT NULL,
+  `quantity` int NOT NULL DEFAULT '1',
+  `addedAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cartID`),
+  UNIQUE KEY `unique_user_item` (`userID`,`itemID`),
+  KEY `fk_cart_user` (`userID`),
+  KEY `fk_cart_item` (`itemID`),
+  CONSTRAINT `fk_cart_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_cart_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `cart_chk_1` CHECK ((`quantity` > 0))
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cart`
+--
+
+LOCK TABLES `cart` WRITE;
+/*!40000 ALTER TABLE `cart` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cart` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -110,6 +263,43 @@ CREATE TABLE `dependents` (
 LOCK TABLES `dependents` WRITE;
 /*!40000 ALTER TABLE `dependents` DISABLE KEYS */;
 /*!40000 ALTER TABLE `dependents` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `doctor_alerts`
+--
+
+DROP TABLE IF EXISTS `doctor_alerts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `doctor_alerts` (
+  `alertID` int NOT NULL AUTO_INCREMENT,
+  `doctorID` int NOT NULL,
+  `patientID` int NOT NULL,
+  `apptID` int NOT NULL,
+  `alertType` enum('EMERGENCY','URGENT','INFO') NOT NULL DEFAULT 'INFO',
+  `alertMessage` text,
+  `isRead` tinyint(1) DEFAULT '0',
+  `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`alertID`),
+  KEY `idx_doctor` (`doctorID`),
+  KEY `idx_appointment` (`apptID`),
+  KEY `idx_unread` (`isRead`),
+  KEY `fk_alert_patient` (`patientID`),
+  CONSTRAINT `fk_alert_appointment` FOREIGN KEY (`apptID`) REFERENCES `appointment` (`apptID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_alert_doctor` FOREIGN KEY (`doctorID`) REFERENCES `employee` (`employeeID`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_alert_patient` FOREIGN KEY (`patientID`) REFERENCES `patient` (`patientID`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `doctor_alerts`
+--
+
+LOCK TABLES `doctor_alerts` WRITE;
+/*!40000 ALTER TABLE `doctor_alerts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `doctor_alerts` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -275,6 +465,67 @@ INSERT INTO `invoice` VALUES (1,1,10,3,'2025-10-30','Pending','Cash',10000.00,'a
 UNLOCK TABLES;
 
 --
+-- Table structure for table `low_stock_notifications`
+--
+
+DROP TABLE IF EXISTS `low_stock_notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `low_stock_notifications` (
+  `notificationID` int NOT NULL AUTO_INCREMENT,
+  `itemID` int NOT NULL,
+  `itemName` varchar(120) NOT NULL,
+  `currentStock` int NOT NULL,
+  `notifiedAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  `isRead` tinyint(1) DEFAULT '0',
+  PRIMARY KEY (`notificationID`),
+  KEY `fk_notification_item` (`itemID`),
+  CONSTRAINT `fk_notification_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `low_stock_notifications`
+--
+
+LOCK TABLES `low_stock_notifications` WRITE;
+/*!40000 ALTER TABLE `low_stock_notifications` DISABLE KEYS */;
+INSERT INTO `low_stock_notifications` VALUES (1,1,'Contact Solution',2,'2025-11-18 21:42:40',1),(2,1,'Contact Solution',2,'2025-11-18 21:48:36',1),(3,1,'Contact Solution',2,'2025-11-18 21:50:55',0),(4,2,'Contact Solution',2,'2025-11-18 22:06:04',0),(5,5,'Contact Lens Case',3,'2025-11-18 22:06:04',0),(6,7,'Eyeglass Repair Kit',1,'2025-11-18 22:06:04',0),(7,1,'Contact Solution',0,'2025-11-19 04:20:49',0);
+/*!40000 ALTER TABLE `low_stock_notifications` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `order_items`
+--
+
+DROP TABLE IF EXISTS `order_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_items` (
+  `orderItemID` int NOT NULL AUTO_INCREMENT,
+  `orderID` int NOT NULL,
+  `itemID` int NOT NULL,
+  `quantity` int NOT NULL,
+  `priceAtPurchase` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`orderItemID`),
+  KEY `fk_orderitem_order` (`orderID`),
+  KEY `fk_orderitem_item` (`itemID`),
+  CONSTRAINT `fk_orderitem_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_orderitem_order` FOREIGN KEY (`orderID`) REFERENCES `shop_orders` (`orderID`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `order_items`
+--
+
+LOCK TABLES `order_items` WRITE;
+/*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
+INSERT INTO `order_items` VALUES (1,4,1,5,5.00),(2,5,1,3,5.00),(3,6,1,2,5.00);
+/*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `patient`
 --
 
@@ -302,7 +553,7 @@ CREATE TABLE `patient` (
   UNIQUE KEY `email` (`email`),
   KEY `fk_patient_user` (`userID`),
   CONSTRAINT `fk_patient_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -311,7 +562,7 @@ CREATE TABLE `patient` (
 
 LOCK TABLES `patient` WRITE;
 /*!40000 ALTER TABLE `patient` DISABLE KEYS */;
-INSERT INTO `patient` VALUES (1,'Robert','J','Anderson','Male','1965-04-20','111 Main St, Houston, TX 77001',NULL,'robert.anderson@email.com','713-555-1001','emergency@anderson.com','713-555-1002','Nearsighted since childhood, wears glasses','Diabetes Type 2, Hypertension','Blue Cross PPO',NULL),(2,'Jennifer','K','Taylor','Female','1978-08-15','222 Oak Ave, Houston, TX 77002',NULL,'jennifer.taylor@email.com','713-555-1101','emergency@taylor.com','713-555-1102','Farsighted, requires reading glasses','No significant medical history','United Healthcare',NULL),(3,'William','L','Thomas','Male','1992-01-30','333 Pine St, Houston, TX 77003',NULL,'william.thomas@email.com','713-555-1201','emergency@thomas.com','713-555-1202','Perfect vision until recently','Seasonal allergies','Aetna HMO',NULL),(4,'Mary','M','Garcia','Female','1955-11-08','444 Elm Rd, Houston, TX 77004',NULL,'mary.garcia@email.com','713-555-1301','emergency@garcia.com','713-555-1302','Cataracts developing, glaucoma history','Arthritis, High cholesterol','Medicare + Supplemental',NULL),(5,'James','N','Martinez','Male','1988-06-22','555 Maple Dr, Houston, TX 77005',NULL,'james.martinez@email.com','713-555-1401','emergency@martinez.com','713-555-1402','Astigmatism, uses contact lenses','No significant medical history','Cigna',NULL),(6,'Patricia','O','Rodriguez','Female','1970-03-14','666 Cedar Ln, Houston, TX 77006',NULL,'patricia.rodriguez@email.com','713-555-1501','emergency@rodriguez.com','713-555-1502','Presbyopia, bifocals needed','Diabetes Type 1','Humana',NULL),(7,'Christopher','P','Lopez','Male','1985-09-05','777 Birch Way, Houston, TX 77007',NULL,'chris.lopez@email.com','713-555-1601','emergency@lopez.com','713-555-1602','Myopia, recently diagnosed','No significant medical history','Blue Cross HMO',NULL),(8,'Linda','Q','Gonzalez','Female','1960-12-18','888 Spruce Ct, Houston, TX 77008',NULL,'linda.gonzalez@email.com','713-555-1701','emergency@gonzalez.com','713-555-1702','Macular degeneration risk, family history','Hypertension, Osteoporosis','Kaiser Permanente',NULL),(9,'Daniel','R','Wilson','Male','1995-07-28','999 Willow St, Houston, TX 77009',NULL,'daniel.wilson@email.com','713-555-1801','emergency@wilson.com','713-555-1802','Computer vision syndrome','No significant medical history','United Healthcare PPO',NULL),(10,'Barb','','Lee','Female','1968-02-11','1010 Ash Ave, Houston, TX 77010',NULL,'barbara.lee@email.com','713-555-1901','emergency@lee.com','713-555-1902','Dry eye syndrome, requires drops','Thyroid disorder','Aetna PPO',NULL),(11,'Carlos','','Alba','Male','2004-09-13','120 sesame street',NULL,'carlos@gmail.com','99999999999','','','','','',NULL),(14,'Tan','','Oliver','Male','2001-04-25','',NULL,'abcd123@gmail.com','','','','','','',9),(15,'Kyle',NULL,'Gen',NULL,NULL,NULL,NULL,'abc123@gmail.com','1324567890',NULL,NULL,NULL,NULL,NULL,10),(16,'car',NULL,'al',NULL,NULL,NULL,NULL,'carl@gmail.com','9238909090',NULL,NULL,NULL,NULL,NULL,11),(17,'Tuam',NULL,'Olive',NULL,NULL,NULL,NULL,'abcd1@gmail.com','8329906834',NULL,NULL,NULL,NULL,NULL,12);
+INSERT INTO `patient` VALUES (1,'Robert','J','Anderson','Male','1965-04-20','111 Main St, Houston, TX 77001',NULL,'robert.anderson@email.com','713-555-1001','emergency@anderson.com','713-555-1002','Nearsighted since childhood, wears glasses','Diabetes Type 2, Hypertension','Blue Cross PPO',NULL),(2,'Jennifer','K','Taylor','Female','1978-08-15','222 Oak Ave, Houston, TX 77002',NULL,'jennifer.taylor@email.com','713-555-1101','emergency@taylor.com','713-555-1102','Farsighted, requires reading glasses','No significant medical history','United Healthcare',NULL),(3,'William','L','Thomas','Male','1992-01-30','333 Pine St, Houston, TX 77003',NULL,'william.thomas@email.com','713-555-1201','emergency@thomas.com','713-555-1202','Perfect vision until recently','Seasonal allergies','Aetna HMO',NULL),(4,'Mary','M','Garcia','Female','1955-11-08','444 Elm Rd, Houston, TX 77004',NULL,'mary.garcia@email.com','713-555-1301','emergency@garcia.com','713-555-1302','Cataracts developing, glaucoma history','Arthritis, High cholesterol','Medicare + Supplemental',NULL),(5,'James','N','Martinez','Male','1988-06-22','555 Maple Dr, Houston, TX 77005',NULL,'james.martinez@email.com','713-555-1401','emergency@martinez.com','713-555-1402','Astigmatism, uses contact lenses','No significant medical history','Cigna',NULL),(6,'Patricia','O','Rodriguez','Female','1970-03-14','666 Cedar Ln, Houston, TX 77006',NULL,'patricia.rodriguez@email.com','713-555-1501','emergency@rodriguez.com','713-555-1502','Presbyopia, bifocals needed','Diabetes Type 1','Humana',NULL),(7,'Christopher','P','Lopez','Male','1985-09-05','777 Birch Way, Houston, TX 77007',NULL,'chris.lopez@email.com','713-555-1601','emergency@lopez.com','713-555-1602','Myopia, recently diagnosed','No significant medical history','Blue Cross HMO',NULL),(8,'Linda','Q','Gonzalez','Female','1960-12-18','888 Spruce Ct, Houston, TX 77008',NULL,'linda.gonzalez@email.com','713-555-1701','emergency@gonzalez.com','713-555-1702','Macular degeneration risk, family history','Hypertension, Osteoporosis','Kaiser Permanente',NULL),(9,'Daniel','R','Wilson','Male','1995-07-28','999 Willow St, Houston, TX 77009',NULL,'daniel.wilson@email.com','713-555-1801','emergency@wilson.com','713-555-1802','Computer vision syndrome','No significant medical history','United Healthcare PPO',NULL),(10,'Barb','','Lee','Female','1968-02-11','1010 Ash Ave, Houston, TX 77010',NULL,'barbara.lee@email.com','713-555-1901','emergency@lee.com','713-555-1902','Dry eye syndrome, requires drops','Thyroid disorder','Aetna PPO',NULL),(11,'Carlos','','Alba','Male','2004-09-13','120 sesame street',NULL,'carlos@gmail.com','99999999999','','','','','',NULL),(14,'Tan','','Oliver','Male','2001-04-25','',NULL,'abcd123@gmail.com','','','','','','',9),(15,'Kyle',NULL,'Gen',NULL,NULL,NULL,NULL,'abc123@gmail.com','1324567890',NULL,NULL,NULL,NULL,NULL,10),(16,'car',NULL,'al',NULL,NULL,NULL,NULL,'carl@gmail.com','9238909090',NULL,NULL,NULL,NULL,NULL,11),(17,'Tuam',NULL,'Olive',NULL,NULL,NULL,NULL,'abcd1@gmail.com','8329906834',NULL,NULL,NULL,NULL,NULL,12),(20,'carlos',NULL,'as',NULL,NULL,NULL,NULL,'carlos1234@gmail.com','9803904899',NULL,NULL,NULL,NULL,NULL,17),(21,'Car',NULL,'a',NULL,NULL,NULL,NULL,'carlos12345@gmail.com','9802390000',NULL,NULL,NULL,NULL,NULL,18),(22,'CAS',NULL,'SA',NULL,NULL,NULL,NULL,'carlosa12345@gmail.com','9809009890',NULL,NULL,NULL,NULL,NULL,19),(23,'CASa',NULL,'SAME',NULL,NULL,NULL,NULL,'cal1@gmail.com','9803909000',NULL,NULL,NULL,NULL,NULL,20),(24,'John',NULL,'be',NULL,NULL,NULL,NULL,'john321@gmail.com','9802903900',NULL,NULL,NULL,NULL,NULL,21),(25,'Christ','','Joey',NULL,NULL,'',NULL,'bcd123@gmail.com','234-789-0057',NULL,NULL,NULL,NULL,NULL,22),(26,'Cesar',NULL,'ar','Male','2002-09-12','123 test',NULL,'cesar@gmail.com','9802909800',NULL,NULL,NULL,NULL,NULL,23),(27,'Angel','D','Maria','Male','2001-02-07','456 lane',NULL,'def123@gmail.com','1112223333',NULL,NULL,NULL,NULL,NULL,24),(28,'fdfsdaf',NULL,'dsafsd','Male','2009-09-09','324',NULL,'pdf@gmail.com','sdfsd',NULL,NULL,NULL,NULL,NULL,25),(29,'chavez','a','asdd','Male','2000-09-11','123 test',NULL,'chavez@gmail.com','2132312345',NULL,NULL,NULL,NULL,NULL,26);
 /*!40000 ALTER TABLE `patient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -352,48 +603,6 @@ LOCK TABLES `prescription` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `users`
---
-
-DROP TABLE IF EXISTS `users`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `users` (
-  `userID` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) NOT NULL,
-  `passwordHash` varchar(255) NOT NULL,
-  `role` enum('Admin','Doctor','Receptionist','Patient') NOT NULL,
-  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`userID`),
-  UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `users`
---
-
-LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (9,'abcd123@gmail.com','','Patient','2025-11-18 03:25:41'),(10,'abc123@gmail.com','$2a$10$XTnIY20Kq5pKt2g4zWu0qeamQjaewrWUGbMWXKqiP4c77uFboI6GW','Patient','2025-11-18 04:25:04'),(11,'carl@gmail.com','$2a$10$5RV76.aM5m3vvrScxpeS8OAxOxoA3oX.8j/KqGPH1U5eflkXxh72O','Patient','2025-11-18 04:58:05'),(12,'abcd1@gmail.com','$2a$10$3fc5wBy3V06qb4i85fEhvegkKVDxsz/w/eAC0Yh79PzlUywDkc5xO','Patient','2025-11-18 05:07:15');
-/*!40000 ALTER TABLE `users` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Dumping routines for database 'defaultdb'
---
-SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
---
 -- Table structure for table `shop_items`
 --
 
@@ -411,9 +620,9 @@ CREATE TABLE `shop_items` (
   `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`itemID`),
-  CHECK (`price` >= 0),
-  CHECK (`stockQuantity` >= 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `shop_items_chk_1` CHECK ((`price` >= 0)),
+  CONSTRAINT `shop_items_chk_2` CHECK ((`stockQuantity` >= 0))
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -422,47 +631,61 @@ CREATE TABLE `shop_items` (
 
 LOCK TABLES `shop_items` WRITE;
 /*!40000 ALTER TABLE `shop_items` DISABLE KEYS */;
-INSERT INTO `shop_items` VALUES
-(1,'Contact Solution','Multi-purpose contact lens solution for cleaning and storing contact lenses',12.99,50,'Contact Care',NULL,NOW(),NOW()),
-(2,'Glasses Cleaner Spray','Professional glasses cleaning spray for lenses and frames',8.99,75,'Cleaning',NULL,NOW(),NOW()),
-(3,'Soft Microfiber Cloth','Ultra-soft microfiber cleaning cloth for eyewear',4.99,100,'Cleaning',NULL,NOW(),NOW()),
-(4,'Contact Lens Case','Durable contact lens storage case with left/right markings',3.49,80,'Contact Care',NULL,NOW(),NOW()),
-(5,'Anti-Fog Wipes','Individually wrapped anti-fog wipes for glasses',9.99,60,'Cleaning',NULL,NOW(),NOW()),
-(6,'Eyeglass Repair Kit','Complete repair kit with screws, screwdriver, and nose pads',7.99,40,'Accessories',NULL,NOW(),NOW());
+INSERT INTO `shop_items` VALUES (1,'Contact Solution','',5.00,0,'Cleaning','','2025-11-18 21:15:58','2025-11-19 04:20:49'),(2,'Contact Solution','Multi-purpose contact lens solution for cleaning and storing contact lenses',12.99,2,'Contact Care',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04'),(3,'Glasses Cleaner Spray','Professional glasses cleaning spray for lenses and frames',8.99,75,'Cleaning',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04'),(4,'Soft Microfiber Cloth','Ultra-soft microfiber cleaning cloth for eyewear',4.99,100,'Cleaning',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04'),(5,'Contact Lens Case','Durable contact lens storage case with left/right markings',3.49,3,'Contact Care',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04'),(6,'Anti-Fog Wipes','Individually wrapped anti-fog wipes for glasses',9.99,60,'Cleaning',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04'),(7,'Eyeglass Repair Kit','Complete repair kit with screws, screwdriver, and nose pads',7.99,1,'Accessories',NULL,'2025-11-18 22:06:04','2025-11-18 22:06:04');
 /*!40000 ALTER TABLE `shop_items` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Table structure for table `cart`
---
-
-DROP TABLE IF EXISTS `cart`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `cart` (
-  `cartID` int NOT NULL AUTO_INCREMENT,
-  `userID` int NOT NULL,
-  `itemID` int NOT NULL,
-  `quantity` int NOT NULL DEFAULT '1',
-  `addedAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`cartID`),
-  UNIQUE KEY `unique_user_item` (`userID`, `itemID`),
-  KEY `fk_cart_user` (`userID`),
-  KEY `fk_cart_item` (`itemID`),
-  CONSTRAINT `fk_cart_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_cart_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CHECK (`quantity` > 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `cart`
---
-
-LOCK TABLES `cart` WRITE;
-/*!40000 ALTER TABLE `cart` DISABLE KEYS */;
-/*!40000 ALTER TABLE `cart` ENABLE KEYS */;
-UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `check_low_stock_after_insert` AFTER INSERT ON `shop_items` FOR EACH ROW BEGIN
+  -- Check if stock quantity is 3 or lower
+  IF NEW.stockQuantity <= 3 AND NEW.stockQuantity >= 0 THEN
+    -- Insert a new low stock notification
+    INSERT INTO low_stock_notifications (itemID, itemName, currentStock, notifiedAt, isRead)
+    VALUES (NEW.itemID, NEW.itemName, NEW.stockQuantity, NOW(), 0);
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `check_low_stock_after_update` AFTER UPDATE ON `shop_items` FOR EACH ROW BEGIN
+  -- Check if stock quantity is 3 or lower
+  IF NEW.stockQuantity <= 3 AND NEW.stockQuantity >= 0 THEN
+    -- Check if a notification already exists for this item with the same stock level
+    IF NOT EXISTS (
+      SELECT 1 FROM low_stock_notifications
+      WHERE itemID = NEW.itemID
+      AND currentStock = NEW.stockQuantity
+      AND isRead = 0
+    ) THEN
+      -- Insert a new low stock notification
+      INSERT INTO low_stock_notifications (itemID, itemName, currentStock, notifiedAt, isRead)
+      VALUES (NEW.itemID, NEW.itemName, NEW.stockQuantity, NOW(), 0);
+    END IF;
+  END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `shop_orders`
@@ -482,7 +705,7 @@ CREATE TABLE `shop_orders` (
   PRIMARY KEY (`orderID`),
   KEY `fk_order_user` (`userID`),
   CONSTRAINT `fk_order_user` FOREIGN KEY (`userID`) REFERENCES `users` (`userID`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -491,119 +714,53 @@ CREATE TABLE `shop_orders` (
 
 LOCK TABLES `shop_orders` WRITE;
 /*!40000 ALTER TABLE `shop_orders` DISABLE KEYS */;
+INSERT INTO `shop_orders` VALUES (4,19,25.00,'carlos a','9823039039213','Completed','2025-11-18 21:36:16'),(5,19,15.00,'carlos a','9823039039213','Completed','2025-11-18 21:42:40'),(6,26,10.00,'carlos a','9823039039213','Completed','2025-11-19 04:20:49');
 /*!40000 ALTER TABLE `shop_orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `order_items`
+-- Table structure for table `users`
 --
 
-DROP TABLE IF EXISTS `order_items`;
+DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `order_items` (
-  `orderItemID` int NOT NULL AUTO_INCREMENT,
-  `orderID` int NOT NULL,
-  `itemID` int NOT NULL,
-  `quantity` int NOT NULL,
-  `priceAtPurchase` decimal(10,2) NOT NULL,
-  PRIMARY KEY (`orderItemID`),
-  KEY `fk_orderitem_order` (`orderID`),
-  KEY `fk_orderitem_item` (`itemID`),
-  CONSTRAINT `fk_orderitem_order` FOREIGN KEY (`orderID`) REFERENCES `shop_orders` (`orderID`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_orderitem_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `users` (
+  `userID` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `passwordHash` varchar(255) NOT NULL,
+  `role` enum('Admin','Doctor','Receptionist','Patient') NOT NULL,
+  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`userID`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `order_items`
+-- Dumping data for table `users`
 --
 
-LOCK TABLES `order_items` WRITE;
-/*!40000 ALTER TABLE `order_items` DISABLE KEYS */;
-/*!40000 ALTER TABLE `order_items` ENABLE KEYS */;
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (9,'abcd123@gmail.com','','Patient','2025-11-18 03:25:41'),(10,'abc123@gmail.com','$2a$10$XTnIY20Kq5pKt2g4zWu0qeamQjaewrWUGbMWXKqiP4c77uFboI6GW','Patient','2025-11-18 04:25:04'),(11,'carl@gmail.com','$2a$10$5RV76.aM5m3vvrScxpeS8OAxOxoA3oX.8j/KqGPH1U5eflkXxh72O','Patient','2025-11-18 04:58:05'),(12,'abcd1@gmail.com','$2a$10$3fc5wBy3V06qb4i85fEhvegkKVDxsz/w/eAC0Yh79PzlUywDkc5xO','Patient','2025-11-18 05:07:15'),(17,'carlos1234@gmail.com','$2a$10$GBYIIqmTNnAb302PM.nWhecNJ.QwUCUQJsxoPis.iTbsynqhIV/ri','Patient','2025-11-18 17:06:40'),(18,'carlos12345@gmail.com','$2a$10$lo4R8Ej0EfvvdbjUdh/.Q.sNq3gBHejQsP9mIL965t1sQ0J7Jcb0S','Patient','2025-11-18 18:30:26'),(19,'carlosa12345@gmail.com','$2a$10$xF/lFb9C5FA721UCC81hn.o4asQeBBq01RA29ZBgLAVtedFdGboC6','Patient','2025-11-18 18:31:52'),(20,'cal1@gmail.com','$2a$10$2ucwNL6JWNhQ4o.FuUv7w.2L3wKuMPeqjodsvjHRQtjVCbnFvDCSK','Patient','2025-11-18 18:39:11'),(21,'john321@gmail.com','$2a$10$AFfUMLZ/BGmyVmNYfxxhSO/qxXYRP6WYKfUMxmfY34OnwTye8hrUq','Patient','2025-11-18 19:00:44'),(22,'bcd123@gmail.com','$2a$10$XxWwq4JmBOFuhzNWLDxEe.qLqEbTOvKFsFXkykMGCFFsEZfOrF6ji','Patient','2025-11-18 22:33:57'),(23,'cesar@gmail.com','$2a$10$vCx.h8ZQ8OjAuAVbBwB7VuNWuOoMDmu5tNWGb.jmwL5v.Hrl32gTi','Patient','2025-11-18 22:59:17'),(24,'def123@gmail.com','$2a$10$vkAyuokB530rTLrUQaswDucD4tTkVZPPdmaH4sQo6upP7nBnow2aW','Patient','2025-11-18 23:26:38'),(25,'pdf@gmail.com','$2a$10$o//KzVGppWhplx946UEFDe6ZSXdsOl/fyJph4aqBYNSNIFyv/d5TS','Patient','2025-11-19 04:05:13'),(26,'chavez@gmail.com','$2a$10$sy6CJ8ss1YnSI8WG8pwf6ukpGcYdycZfaxdXnnR21qjIKUFr8pB9y','Patient','2025-11-19 04:13:31');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `low_stock_notifications`
+-- Dumping events for database 'railway'
 --
 
-DROP TABLE IF EXISTS `low_stock_notifications`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `low_stock_notifications` (
-  `notificationID` int NOT NULL AUTO_INCREMENT,
-  `itemID` int NOT NULL,
-  `itemName` varchar(120) NOT NULL,
-  `currentStock` int NOT NULL,
-  `notifiedAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  `isRead` tinyint(1) DEFAULT '0',
-  PRIMARY KEY (`notificationID`),
-  KEY `fk_notification_item` (`itemID`),
-  CONSTRAINT `fk_notification_item` FOREIGN KEY (`itemID`) REFERENCES `shop_items` (`itemID`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
 --
--- Dumping data for table `low_stock_notifications`
+-- Dumping routines for database 'railway'
 --
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
-LOCK TABLES `low_stock_notifications` WRITE;
-/*!40000 ALTER TABLE `low_stock_notifications` DISABLE KEYS */;
-/*!40000 ALTER TABLE `low_stock_notifications` ENABLE KEYS */;
-UNLOCK TABLES;
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
---
--- Trigger for low stock notifications
---
-
-DELIMITER $$
-
-DROP TRIGGER IF EXISTS `check_low_stock_after_update` $$
-CREATE TRIGGER `check_low_stock_after_update`
-AFTER UPDATE ON `shop_items`
-FOR EACH ROW
-BEGIN
-  -- Check if stock quantity is 3 or lower
-  IF NEW.stockQuantity <= 3 AND NEW.stockQuantity >= 0 THEN
-    -- Check if a notification already exists for this item with the same stock level
-    IF NOT EXISTS (
-      SELECT 1 FROM low_stock_notifications
-      WHERE itemID = NEW.itemID
-      AND currentStock = NEW.stockQuantity
-      AND isRead = 0
-    ) THEN
-      -- Insert a new low stock notification
-      INSERT INTO low_stock_notifications (itemID, itemName, currentStock, notifiedAt, isRead)
-      VALUES (NEW.itemID, NEW.itemName, NEW.stockQuantity, NOW(), 0);
-    END IF;
-  END IF;
-END$$
-
-DROP TRIGGER IF EXISTS `check_low_stock_after_insert` $$
-CREATE TRIGGER `check_low_stock_after_insert`
-AFTER INSERT ON `shop_items`
-FOR EACH ROW
-BEGIN
-  -- Check if stock quantity is 3 or lower
-  IF NEW.stockQuantity <= 3 AND NEW.stockQuantity >= 0 THEN
-    -- Insert a new low stock notification
-    INSERT INTO low_stock_notifications (itemID, itemName, currentStock, notifiedAt, isRead)
-    VALUES (NEW.itemID, NEW.itemName, NEW.stockQuantity, NOW(), 0);
-  END IF;
-END$$
-
-CREATE TABLE IF NOT EXISTS appointment_feedback (
-  feedbackID INT AUTO_INCREMENT PRIMARY KEY,
-  apptID INT NOT NULL,
-  doctorNotes TEXT,
-  requiresSpecialist BOOLEAN DEFAULT FALSE,
-  specialistType VARCHAR(100),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (apptID) REFERENCES appointment(apptID) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- Add index for faster lookups
-CREATE INDEX idx_appt_feedback ON appointment_feedback(apptID);
--- Dump completed on 2025-11-18  9:33:29
+-- Dump completed on 2025-11-19  0:06:00
