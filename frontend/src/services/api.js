@@ -127,6 +127,8 @@ export const shopAPI = {
   getOrders: () => api.get("/shop/orders"),
   getAllOrders: () => api.get("/shop/orders/all"),
   updateOrderStatus: (orderID, status) => api.put(`/shop/orders/${orderID}/status`, { status }),
+  getLowStockNotifications: () => api.get("/shop/notifications/low-stock"),
+  markNotificationRead: (id) => api.put(`/shop/notifications/${id}/read`),
 };
 
 // Doctor Alerts API
