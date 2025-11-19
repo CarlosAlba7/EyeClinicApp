@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { isInPastCST } = require('../utils/timezone');
 
 // Get all appointments with patient and employee details
 router.get('/', authenticateToken, async (req, res) => {
@@ -101,6 +102,11 @@ router.post('/', authenticateToken, authorizeRoles('Admin', 'Receptionist'), asy
       patientID, employeeID, appointmentDate, appointmentTime,
       appointmentStatus, reason, appointmentType
     } = req.body;
+
+    // Check if the appointment time is in the future (CST)
+    if (isInPastCST(appointmentDate, appointmentTime)) {
+      return res.status(400).json({ message: 'Cannot schedule appointments in the past (CST)' });
+    }
 
     const [result] = await db.query(
       `INSERT INTO appointment (

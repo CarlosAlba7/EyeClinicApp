@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/database");
 const { authenticateToken, authorizeRoles } = require("../middleware/auth");
+const { isInPastCST } = require("../utils/timezone");
 
 // GET patient appointments
 router.get(
@@ -63,10 +64,9 @@ router.post(
         return res.status(404).json({ message: "Patient profile missing" });
       }
 
-      // Check if the appointment time is in the future
-      const appointmentDateTime = new Date(`${appointmentDate} ${appointmentTime}`);
-      if (appointmentDateTime < new Date()) {
-        return res.status(400).json({ message: "Cannot book appointments in the past" });
+      // Check if the appointment time is in the future (CST)
+      if (isInPastCST(appointmentDate, appointmentTime)) {
+        return res.status(400).json({ message: "Cannot book appointments in the past (CST)" });
       }
 
       // Insert appointment
