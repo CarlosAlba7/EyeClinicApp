@@ -152,18 +152,6 @@ const Dashboard = ({ user }) => {
           </div>
         )}
 
-        {(user.employeeType === "Admin" ||
-          user.employeeType === "Receptionist") && (
-          <div
-            className="dashboard-card"
-            style={{
-              background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-            }}
-          >
-            <h3>{stats.pendingInvoices}</h3>
-            <p>Pending Invoices</p>
-          </div>
-        )}
 
         {(user.employeeType === "Doctor") && (
           <div
