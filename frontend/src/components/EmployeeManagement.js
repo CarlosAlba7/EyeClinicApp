@@ -296,7 +296,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Birthdate</label>
+                  <label>Birthdate *</label>
                   <input
                     type="date"
                     name="birthdate"
