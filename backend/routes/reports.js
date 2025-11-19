@@ -77,8 +77,8 @@ router.get('/shop-sales', authenticateToken, async (req, res) => {
 
     // Calculate totals
     const totals = results.reduce((acc, row) => ({
-      totalOrders: acc.totalOrders + (row.totalOrders || 0),
-      totalQuantity: acc.totalQuantity + (row.totalQuantitySold || 0),
+      totalOrders: acc.totalOrders + (parseInt(row.totalOrders) || 0),
+      totalQuantity: acc.totalQuantity + (parseInt(row.totalQuantitySold) || 0),
       totalRevenue: acc.totalRevenue + (parseFloat(row.totalRevenue) || 0)
     }), { totalOrders: 0, totalQuantity: 0, totalRevenue: 0 });
 

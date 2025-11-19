@@ -214,9 +214,16 @@ const Dashboard = ({ user }) => {
               View Invoices
             </a>
           )}
-          <a href="/reports" className="btn btn-secondary">
-            Generate Reports
-          </a>
+          {user.employeeType === "Admin" && (
+            <>
+              <a href="/reports" className="btn btn-secondary">
+                Generate Reports
+              </a>
+              <a href="/employee-management" className="btn btn-info">
+                Manage Employees
+              </a>
+            </>
+          )}
           <a href="/shop" className="btn btn-primary">
             Shop
           </a>

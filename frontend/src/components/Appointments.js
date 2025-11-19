@@ -12,6 +12,8 @@ const Appointments = ({ user }) => {
   const [completingAppointment, setCompletingAppointment] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDoctor, setFilterDoctor] = useState('');
   const [formData, setFormData] = useState({
     patientID: '',
     employeeID: '',
@@ -29,19 +31,27 @@ const Appointments = ({ user }) => {
 
   useEffect(() => {
     fetchData();
-  }, [filterStatus]);
+  }, [filterStatus, filterDate, filterDoctor]);
 
   const fetchData = async () => {
     try {
+      const params = {};
+      if (filterStatus) params.status = filterStatus;
+      if (filterDate) params.date = filterDate;
+      if (filterDoctor) params.employeeID = parseInt(filterDoctor);
+
       const [apptResponse, patientResponse, employeeResponse] = await Promise.all([
-        appointmentAPI.getAll({ status: filterStatus }),
+        appointmentAPI.getAll(params),
         patientAPI.getAll(),
         employeeAPI.getAll({ type: 'Doctor' }),
       ]);
+
       setAppointments(apptResponse.data);
       setPatients(patientResponse.data);
       setEmployees(employeeResponse.data);
+
     } catch (error) {
+      console.error('Fetch data error:', error);
       showMessage('error', 'Failed to fetch data');
     } finally {
       setLoading(false);
@@ -184,18 +194,67 @@ const Appointments = ({ user }) => {
         <div className={`alert alert-${message.type}`}>{message.text}</div>
       )}
 
-      <div className="search-bar">
-        <select
-          className="form-control"
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-        >
-          <option value="">All Statuses</option>
-          <option value="Scheduled">Scheduled</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-          <option value="No-Show">No-Show</option>
-        </select>
+      <div className="search-bar" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
+          <label>Date</label>
+          <input
+            type="date"
+            className="form-control"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+          />
+        </div>
+        <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
+          <label>Doctor</label>
+          <select
+            className="form-control"
+            value={filterDoctor}
+            onChange={(e) => setFilterDoctor(e.target.value)}
+          >
+            <option value="">All Doctors</option>
+            {employees
+              .filter(employee => {
+                if (user.employeeType === 'Doctor') {
+                  // user object has userID, not employeeID
+                  const empID = parseInt(employee.employeeID);
+                  const userID = parseInt(user.userID);
+                  return empID === userID;
+                }
+                return true;
+              })
+              .map((employee) => (
+                <option key={employee.employeeID} value={String(employee.employeeID)}>
+                  Dr. {employee.firstName} {employee.lastName}
+                </option>
+              ))}
+          </select>
+        </div>
+        <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
+          <label>Status</label>
+          <select
+            className="form-control"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="">All Statuses</option>
+            <option value="Scheduled">Scheduled</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="No-Show">No-Show</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+          <button
+            onClick={() => {
+              setFilterDate(new Date().toISOString().split('T')[0]);
+              setFilterDoctor('');
+              setFilterStatus('');
+            }}
+            className="btn btn-secondary"
+          >
+            Reset Filters
+          </button>
+        </div>
       </div>
 
       <div className="table-container">
