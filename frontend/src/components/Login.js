@@ -86,7 +86,7 @@ const Login = ({ setUser }) => {
           </button>
         </form>
 
-        <div
+        {/*<div
           style={{ marginTop: "1rem", fontSize: "0.875rem", color: "#7f8c8d" }}
         >
           <p>
@@ -95,7 +95,7 @@ const Login = ({ setUser }) => {
           <p>Admin: admin@eyeclinic.com / password123</p>
           <p>Doctor: doctor@eyeclinic.com / password123</p>
           <p>Receptionist: receptionist@eyeclinic.com / password123</p>
-        </div>
+        </div>*/}
       </div>
     </div>
   );
