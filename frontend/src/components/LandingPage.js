@@ -86,7 +86,7 @@ const LandingPage = () => {
         <div className="doctor-grid">
           <div className="doctor-card fade-up">
             <img
-              src="/opthalmologist-2211.jpg"
+              src="/ophthalmologist-2211.jpg"
               alt="doctor"
             />
             <h3>Dr. John Doctor</h3>
@@ -125,6 +125,7 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
 
 
 
