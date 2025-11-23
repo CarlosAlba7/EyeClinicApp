@@ -53,7 +53,7 @@ const PatientSignup = () => {
           {/* FIRST + MIDDLE + LAST NAME ROW */}
           <div className="form-row">
             <div className="form-group">
-              <label>First Name *</label>
+              <label>First Name <span class="required-star">*</span></label>
               <input
                 type="text"
                 name="firstName"
@@ -79,7 +79,7 @@ const PatientSignup = () => {
             </div>
 
             <div className="form-group">
-              <label>Last Name *</label>
+              <label>Last Name <span class="required-star">*</span></label>
               <input
                 type="text"
                 name="lastName"
@@ -94,7 +94,7 @@ const PatientSignup = () => {
 
           {/* EMAIL */}
           <div className="form-group">
-            <label>Email Address *</label>
+            <label>Email Address <span class="required-star">*</span></label>
             <input
               type="email"
               name="email"
@@ -108,7 +108,7 @@ const PatientSignup = () => {
 
           {/* PHONE */}
           <div className="form-group">
-            <label>Phone *</label>
+            <label>Phone <span class="required-star">*</span></label>
             <input
               type="tel"
               name="phone"
@@ -123,7 +123,7 @@ const PatientSignup = () => {
           {/* GENDER + BIRTHDATE ROW */}
           <div className="form-row">
             <div className="form-group">
-              <label>Gender *</label>
+              <label>Gender <span class="required-star">*</span></label>
               <select
                 name="gender"
                 value={formData.gender}
@@ -139,7 +139,7 @@ const PatientSignup = () => {
             </div>
 
             <div className="form-group">
-              <label>Date of Birth *</label>
+              <label>Date of Birth <span class="required-star">*</span></label>
               <input
                 type="date"
                 name="patientBirthdate"
@@ -166,7 +166,7 @@ const PatientSignup = () => {
 
           {/* PASSWORD WITH TOGGLE */}
           <div className="form-group">
-            <label>Password *</label>
+            <label>Password <span class="required-star">*</span></label>
             <div className="password-wrapper">
               <input
                 type={showPassword ? "text" : "password"}
@@ -199,5 +199,6 @@ const PatientSignup = () => {
     </div>
   );
 };
+
 
 export default PatientSignup;
