@@ -212,6 +212,7 @@ const Appointments = ({ user }) => {
             onChange={(e) => setFilterDate(e.target.value)}
           />
         </div>
+              
         <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
           <label>Doctor</label>
           <select
@@ -237,6 +238,7 @@ const Appointments = ({ user }) => {
               ))}
           </select>
         </div>
+            
         <div className="form-group" style={{ flex: '1', minWidth: '200px', margin: 0 }}>
           <label>Status</label>
           <select
@@ -251,25 +253,24 @@ const Appointments = ({ user }) => {
             <option value="No-Show">No-Show</option>
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-          <button
-            onClick={() => {
-              setFilterDate(new Date().toISOString().split('T')[0]);
-              setFilterDoctor('');
-              setFilterStatus('');
-            }}
-            className="btn btn-secondary"
-          >
-            Reset Filters
-          </button>
-        </div>
-        <div>
-          {canModify && (
+              
+        <button
+          onClick={() => {
+            setFilterDate(new Date().toISOString().split('T')[0]);
+            setFilterDoctor('');
+            setFilterStatus('');
+          }}
+          className="btn btn-secondary"
+          style={{ height: 'fit-content', alignSelf: 'flex-end' }}
+        >
+          Reset Filters
+        </button>
+        
+        {canModify && (
           <button onClick={openAddModal} className="btn btn-primary">
             Schedule New Appointment
           </button>
         )}
-        </div>
       </div>
 
       <div className="table-container">
