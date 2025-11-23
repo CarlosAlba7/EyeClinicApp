@@ -362,7 +362,7 @@ const Appointments = ({ user }) => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Patient *</label>
+                <label>Patient <span class="required-star">*</span></label>
                 <select
                   name="patientID"
                   className="form-control"
@@ -397,7 +397,7 @@ const Appointments = ({ user }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Date *</label>
+                <label>Date <span class="required-star">*</span></label>
                 <input
                   type="date"
                   name="appointmentDate"
@@ -408,7 +408,7 @@ const Appointments = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Time *</label>
+                <label>Time <span class="required-star">*</span></label>
                 <input
                   type="time"
                   name="appointmentTime"
@@ -486,7 +486,7 @@ const Appointments = ({ user }) => {
               </div>
 
               <div className="form-group">
-                <label>Doctor's Notes *</label>
+                <label>Doctor Notes <span class="required-star">*</span></label>
                 <textarea
                   name="doctorNotes"
                   className="form-control"
@@ -513,7 +513,7 @@ const Appointments = ({ user }) => {
 
               {completionData.requiresSpecialist && (
                 <div className="form-group">
-                  <label>Specialist Type *</label>
+                  <label>Specialist Type <span class="required-star">*</span></label>
                   <select
                     name="specialistType"
                     className="form-control"
