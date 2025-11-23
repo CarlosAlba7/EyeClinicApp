@@ -396,7 +396,7 @@ const Appointments = ({ user }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Doctor</label>
+                <label>Doctor <span class="required-star">*</span></label>
                 <select
                   name="employeeID"
                   className="form-control"
