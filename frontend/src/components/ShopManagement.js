@@ -245,7 +245,7 @@ const ShopManagement = ({ user }) => {
           <form onSubmit={handleSubmit} style={{ padding: "1rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="form-group">
-                <label htmlFor="itemName">Item Name *</label>
+                <label htmlFor="itemName">Item Name <span class="required-star">*</span></label>
                 <input
                   type="text"
                   id="itemName"
@@ -271,7 +271,7 @@ const ShopManagement = ({ user }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="price">Price *</label>
+                <label htmlFor="price">Price <span class="required-star">*</span></label>
                 <input
                   type="number"
                   id="price"
@@ -286,7 +286,7 @@ const ShopManagement = ({ user }) => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="stockQuantity">Stock Quantity *</label>
+                <label htmlFor="stockQuantity">Stock Quantity <span class="required-star">*</span></label>
                 <input
                   type="number"
                   id="stockQuantity"
