@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { shopAPI } from "../services/api";
-
+const formRef = useRef(null);
 const ShopManagement = ({ user }) => {
   const [items, setItems] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -111,6 +111,9 @@ const ShopManagement = ({ user }) => {
       imageURL: item.imageURL || "",
     });
     setShowForm(true);
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
   };
 
   const handleDelete = async (itemID, itemName) => {
@@ -238,7 +241,7 @@ const ShopManagement = ({ user }) => {
 
       {/* Add/Edit Item Form */}
       {showForm && (
-        <div className="card">
+        <div className="card" ref={formRef}>
           <div className="card-header">
             {editingItem ? "Edit Item" : "Add New Item"}
           </div>
