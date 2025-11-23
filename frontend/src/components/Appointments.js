@@ -196,11 +196,6 @@ const Appointments = ({ user }) => {
     <div className="container">
       <div className="page-header">
         <h1>Appointments</h1>
-        {canModify && (
-          <button onClick={openAddModal} className="btn btn-primary">
-            Schedule New Appointment
-          </button>
-        )}
       </div>
 
       {message.text && (
@@ -267,6 +262,13 @@ const Appointments = ({ user }) => {
           >
             Reset Filters
           </button>
+        </div>
+        <div>
+          {canModify && (
+          <button onClick={openAddModal} className="btn btn-primary">
+            Schedule New Appointment
+          </button>
+        )}
         </div>
       </div>
 
