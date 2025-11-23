@@ -5,6 +5,7 @@ import { shopAPI } from "../services/api";
 const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [systemMessage, setSystemMessage] = useState("");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -66,10 +67,15 @@ const Checkout = () => {
       const response = await shopAPI.checkout(formData);
 
       // Show success message and redirect
-      alert(
-        `Order completed successfully!\nOrder ID: ${response.data.orderID}\nTotal: $${response.data.totalAmount.toFixed(2)}`
+      setSystemMessage(
+        `Order completed successfully!
+      Order ID: ${response.data.orderID}
+      Total: $${response.data.totalAmount.toFixed(2)}`
       );
-      navigate("/shop");
+    
+      setProcessing(false); 
+      setTimeout(() => navigate("/shop"), 2000); 
+
     } catch (error) {
       console.error("Error processing checkout:", error);
       setError(error.response?.data?.message || "Failed to process checkout");
@@ -100,6 +106,12 @@ const Checkout = () => {
           <button onClick={() => setError("")} className="alert-close">
             ×
           </button>
+        </div>
+      )}
+      {systemMessage && (
+        <div className="system-message">
+          <pre>{systemMessage}</pre>
+          <button onClick={() => setSystemMessage("")} className="alert-close">×</button>
         </div>
       )}
 
