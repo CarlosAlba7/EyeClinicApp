@@ -96,7 +96,7 @@ const BookAppointment = () => {
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Select Doctor *</label>
+            <label>Select Doctor <span class="required-star">*</span></label>
             <select
               name="employeeID"
               className="form-control"
@@ -114,7 +114,7 @@ const BookAppointment = () => {
           </div>
 
           <div className="form-group">
-            <label>Appointment Date *</label>
+            <label>Appointment Date <span class="required-star">*</span></label>
             <input
               type="date"
               name="appointmentDate"
@@ -127,7 +127,7 @@ const BookAppointment = () => {
           </div>
 
           <div className="form-group">
-            <label>Appointment Time *</label>
+            <label>Appointment Time <span class="required-star">*</span></label>
             <input
               type="time"
               name="appointmentTime"
@@ -139,7 +139,7 @@ const BookAppointment = () => {
           </div>
 
           <div className="form-group">
-            <label>Appointment Type *</label>
+            <label>Appointment Type <span class="required-star">*</span></label>
             <select
               name="appointmentType"
               className="form-control"
@@ -159,7 +159,7 @@ const BookAppointment = () => {
           </div>
 
           <div className="form-group">
-            <label>Reason for Visit *</label>
+            <label>Reason for Visit <span class="required-star">*</span></label>
             <textarea
               name="reason"
               className="form-control"
