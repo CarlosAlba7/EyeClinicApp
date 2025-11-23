@@ -245,7 +245,7 @@ const EmployeeManagement = () => {
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                 <div className="form-group">
-                  <label>First Name *</label>
+                  <label>First Name <span class="required-star">*</span></label>
                   <input
                     type="text"
                     name="firstName"
@@ -269,7 +269,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Last Name *</label>
+                  <label>Last Name <span class="required-star">*</span></label>
                   <input
                     type="text"
                     name="lastName"
@@ -281,7 +281,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Gender</label>
+                  <label>Gender <span class="required-star">*</span></label>
                   <select
                     name="gender"
                     className="form-control"
@@ -296,7 +296,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Birthdate *</label>
+                  <label>Birthdate <span class="required-star">*</span></label>
                   <input
                     type="date"
                     name="birthdate"
@@ -307,7 +307,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Employee Type *</label>
+                  <label>Employee Type <span class="required-star">*</span></label>
                   <select
                     name="employeeType"
                     className="form-control"
@@ -325,7 +325,7 @@ const EmployeeManagement = () => {
                 {formData.employeeType === 'Doctor' && (
                   <>
                     <div className="form-group">
-                      <label>Specialization</label>
+                      <label>Specialization <span class="required-star">*</span></label>
                       <input
                         type="text"
                         name="specialization"
@@ -336,7 +336,7 @@ const EmployeeManagement = () => {
                     </div>
 
                     <div className="form-group">
-                      <label>Years of Experience</label>
+                      <label>Years of Experience <span class="required-star">*</span></label>
                       <input
                         type="number"
                         name="yearsExperience"
@@ -361,7 +361,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Email *</label>
+                  <label>Email <span class="required-star">*</span></label>
                   <input
                     type="email"
                     name="email"
@@ -384,7 +384,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Start Date *</label>
+                  <label>Start Date <span class="required-star">*</span></label>
                   <input
                     type="date"
                     name="startedOn"
@@ -396,7 +396,7 @@ const EmployeeManagement = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Salary *</label>
+                  <label>Salary <span class="required-star">*</span></label>
                   <input
                     type="number"
                     name="salary"
