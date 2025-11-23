@@ -221,7 +221,7 @@ const Patients = ({ user }) => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>First Name *</label>
+                <label>First Name <span class="required-star">*</span></label>
                 <input
                   type="text"
                   name="firstName"
@@ -243,7 +243,7 @@ const Patients = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Last Name *</label>
+                <label>Last Name <span class="required-star">*</span></label>
                 <input
                   type="text"
                   name="lastName"
@@ -254,7 +254,7 @@ const Patients = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Gender</label>
+                <label>Gender <span class="required-star">*</span></label>
                 <select
                   name="gender"
                   className="form-control"
@@ -268,7 +268,7 @@ const Patients = ({ user }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Birthdate</label>
+                <label>Birthdate <span class="required-star">*</span></label>
                 <input
                   type="date"
                   name="patientBirthdate"
@@ -278,7 +278,7 @@ const Patients = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Email *</label>
+                <label>Email <span class="required-star">*</span></label>
                 <input
                   type="email"
                   name="email"
@@ -289,7 +289,7 @@ const Patients = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Phone</label>
+                <label>Phone <span class="required-star">*</span></label>
                 <input
                   type="tel"
                   name="phone"
