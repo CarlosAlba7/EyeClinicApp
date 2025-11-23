@@ -12,6 +12,7 @@ const MyAppointments = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,24 +38,28 @@ const MyAppointments = () => {
     setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   };
 
-  const handleCancel = async (apptID) => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) {
-      return;
-    }
+  const handleCancel = (apptID) => {
+    setConfirmDialog({
+      show: true,
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment?',
+      onConfirm: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.put(
+            `${API_BASE_URL}/patient-appointments/cancel/${apptID}`,
+            {},
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
 
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `${API_BASE_URL}/patient-appointments/cancel/${apptID}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      showMessage('success', 'Appointment cancelled successfully');
-      fetchAppointments();
-    } catch (error) {
-      showMessage('error', 'Failed to cancel appointment');
-    }
+          showMessage('success', 'Appointment cancelled successfully');
+          fetchAppointments();
+        } catch (error) {
+          showMessage('error', 'Failed to cancel appointment');
+        }
+        setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+      }
+    });
   };
 
   const handleViewDetails = (appointment) => {
@@ -326,6 +331,34 @@ const MyAppointments = () => {
                   className="btn btn-secondary"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDialog.show && (
+        <div className="modal-overlay" onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2>{confirmDialog.title}</h2>
+              <button onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })} className="btn-close">×</button>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className="btn btn-danger"
+                >
+                  Confirm
                 </button>
               </div>
             </div>

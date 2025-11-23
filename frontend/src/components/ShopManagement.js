@@ -10,6 +10,7 @@ const ShopManagement = ({ user }) => {
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   const [formData, setFormData] = useState({
     itemName: "",
     description: "",
@@ -116,37 +117,45 @@ const ShopManagement = ({ user }) => {
     }, 50);
   };
 
-  const handleDelete = async (itemID, itemName) => {
-    if (!window.confirm(`Are you sure you want to delete "${itemName}"?`)) {
-      return;
-    }
-
-    try {
-      setError("");
-      const response = await shopAPI.deleteItem(itemID);
-      setSuccess(response.data.message || "Item deleted successfully!");
-      fetchItems();
-      fetchNotifications();
-    } catch (error) {
-      console.error("Error deleting item:", error);
-      setError(error.response?.data?.message || "Failed to delete item");
-    }
+  const handleDelete = (itemID, itemName) => {
+    setConfirmDialog({
+      show: true,
+      title: 'Delete Item',
+      message: `Are you sure you want to delete "${itemName}"?`,
+      onConfirm: async () => {
+        try {
+          setError("");
+          const response = await shopAPI.deleteItem(itemID);
+          setSuccess(response.data.message || "Item deleted successfully!");
+          fetchItems();
+          fetchNotifications();
+        } catch (error) {
+          console.error("Error deleting item:", error);
+          setError(error.response?.data?.message || "Failed to delete item");
+        }
+        setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+      }
+    });
   };
 
-  const handleRestore = async (itemID, itemName) => {
-    if (!window.confirm(`Are you sure you want to restore "${itemName}"?`)) {
-      return;
-    }
-
-    try {
-      setError("");
-      await shopAPI.restoreItem(itemID);
-      setSuccess("Item restored successfully!");
-      fetchItems();
-    } catch (error) {
-      console.error("Error restoring item:", error);
-      setError(error.response?.data?.message || "Failed to restore item");
-    }
+  const handleRestore = (itemID, itemName) => {
+    setConfirmDialog({
+      show: true,
+      title: 'Restore Item',
+      message: `Are you sure you want to restore "${itemName}"?`,
+      onConfirm: async () => {
+        try {
+          setError("");
+          await shopAPI.restoreItem(itemID);
+          setSuccess("Item restored successfully!");
+          fetchItems();
+        } catch (error) {
+          console.error("Error restoring item:", error);
+          setError(error.response?.data?.message || "Failed to restore item");
+        }
+        setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
+      }
+    });
   };
 
   const markNotificationRead = async (notificationID) => {
@@ -465,6 +474,34 @@ const ShopManagement = ({ user }) => {
           </table>
         </div>
       </div>
+
+      {confirmDialog.show && (
+        <div className="modal-overlay" onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2>{confirmDialog.title}</h2>
+              <button onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })} className="btn-close">×</button>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className="btn btn-primary"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

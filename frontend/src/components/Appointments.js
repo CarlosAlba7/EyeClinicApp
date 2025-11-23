@@ -14,6 +14,7 @@ const Appointments = ({ user }) => {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterDoctor, setFilterDoctor] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState({ show: false, title: '', message: '', onConfirm: null });
   const [formData, setFormData] = useState({
     patientID: '',
     employeeID: '',
@@ -100,16 +101,22 @@ const Appointments = ({ user }) => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this appointment?')) {
-      try {
-        await appointmentAPI.delete(id);
-        showMessage('success', 'Appointment deleted successfully');
-        fetchData();
-      } catch (error) {
-        showMessage('error', 'Failed to delete appointment');
+  const handleDelete = (id) => {
+    setConfirmDialog({
+      show: true,
+      title: 'Delete Appointment',
+      message: 'Are you sure you want to delete this appointment?',
+      onConfirm: async () => {
+        try {
+          await appointmentAPI.delete(id);
+          showMessage('success', 'Appointment deleted successfully');
+          fetchData();
+        } catch (error) {
+          showMessage('error', 'Failed to delete appointment');
+        }
+        setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
       }
-    }
+    });
   };
 
   const resetForm = () => {
@@ -153,16 +160,22 @@ const Appointments = ({ user }) => {
     }
   };
 
-  const handleCancel = async (id) => {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      try {
-        await appointmentAPI.cancel(id);
-        showMessage('success', 'Appointment cancelled');
-        fetchData();
-      } catch (error) {
-        showMessage('error', 'Failed to cancel appointment');
+  const handleCancel = (id) => {
+    setConfirmDialog({
+      show: true,
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment?',
+      onConfirm: async () => {
+        try {
+          await appointmentAPI.cancel(id);
+          showMessage('success', 'Appointment cancelled');
+          fetchData();
+        } catch (error) {
+          showMessage('error', 'Failed to cancel appointment');
+        }
+        setConfirmDialog({ show: false, title: '', message: '', onConfirm: null });
       }
-    }
+    });
   };
 
   const handleCompletionInputChange = (e) => {
@@ -548,6 +561,34 @@ const Appointments = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmDialog.show && (
+        <div className="modal-overlay" onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2>{confirmDialog.title}</h2>
+              <button onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })} className="btn-close">×</button>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <p style={{ marginBottom: '1.5rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setConfirmDialog({ show: false, title: '', message: '', onConfirm: null })}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className="btn btn-danger"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
