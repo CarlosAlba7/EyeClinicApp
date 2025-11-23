@@ -139,11 +139,6 @@ const Patients = ({ user }) => {
     <div className="container">
       <div className="page-header">
         <h1>Patients</h1>
-        {canModify && (
-          <button onClick={openAddModal} className="btn btn-primary">
-            Add New Patient
-          </button>
-        )}
       </div>
 
       {message.text && (
@@ -158,6 +153,11 @@ const Patients = ({ user }) => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {canModify && (
+          <button onClick={openAddModal} className="btn btn-primary">
+            Add New Patient
+          </button>
+        )}
       </div>
 
       <div className="table-container">
