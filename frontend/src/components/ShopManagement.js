@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { shopAPI } from "../services/api";
-const formRef = useRef(null);
+
 const ShopManagement = ({ user }) => {
   const [items, setItems] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -19,7 +19,7 @@ const ShopManagement = ({ user }) => {
     imageURL: "",
   });
   const navigate = useNavigate();
-
+  const formRef = useRef(null);
   useEffect(() => {
     if (user.role !== "Receptionist" && user.role !== "Admin") {
       navigate("/shop");
