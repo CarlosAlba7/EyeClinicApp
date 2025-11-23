@@ -143,6 +143,9 @@
 .login-link span:hover {
   text-decoration: underline;
 }
+.required-star {
+  color: red;
+}
 
 /*********** MOBILE ***********/
 @media (max-width: 600px) {
@@ -155,3 +158,4 @@
     padding: 2rem 1.7rem;
   }
 }
+
