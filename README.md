@@ -1,7 +1,8 @@
 📘Eye Clinic Management System
 A full-stack web application for managing an eye clinic, including patient accounts, booking appointments, shop purchases, alerts, employee management, and generating reports.
 
-🚀 Features  
+🚀 Features 
+  
 🙍‍♂️ / 🙍‍♀️ Patient Portal
 - Sign up & login  
 - Book and view appointments  
