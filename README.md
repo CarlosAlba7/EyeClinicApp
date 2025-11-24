@@ -35,7 +35,8 @@ A full-stack web application for managing an eye clinic, including patient accou
 - MySQL Workbench
 - npm (come with Node)
 2. Backend Setup
-Step 1: Navigate to the backend folder
+```md
+Step 1: Navigate to the Backend folder
 Step 2: Install dependencies using 'npm install' in the terminal
 Step 3: Create a '.env' file inside '/backend'
 DB_HOST=localhost
@@ -53,3 +54,15 @@ Step 4: Import MySQL database
 Step 5: Start the backend by using 'npm start' in the terminal
 If successful, you will see something like this:
 <img width="388" height="102" alt="image" src="https://github.com/user-attachments/assets/fe0dd18c-da68-4196-a1bf-b7eb52e40139" />
+```
+3. Frontend Setup
+```md
+Step 1: Navigate to the Frontend folder
+Step 2: Install dependencies using 'npm install' in the terminal
+Step 3: Start the frontend by using 'npm start' in the terminal
+```
+4. Deployment
+
+🙌 Credits
+Developed by: Tuan Kiet Pham, Carlos Alba, Zoe Webb
+Technologies: React, Node.js, Express, MySQL, JWT, Vercel, Railway
