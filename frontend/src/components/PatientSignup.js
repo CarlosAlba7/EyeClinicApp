@@ -66,7 +66,7 @@ const PatientSignup = () => {
             </div>
 
             <div className="form-group" style={{ maxWidth: '80px' }}>
-              <label>Middle Initial</label>
+              <label>MI</label>
               <input
                 type="text"
                 name="middleInit"
@@ -202,4 +202,5 @@ const PatientSignup = () => {
 
 
 export default PatientSignup;
+
 
