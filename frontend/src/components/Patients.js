@@ -169,7 +169,7 @@ const Patients = ({ user }) => {
               <th>Gender</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Birthdate</th>
+              <th>Date of Birth</th>
               {canModify && <th>Actions</th>}
             </tr>
           </thead>
@@ -268,7 +268,7 @@ const Patients = ({ user }) => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Birthdate <span class="required-star">*</span></label>
+                <label>Date of Birth <span class="required-star">*</span></label>
                 <input
                   type="date"
                   name="patientBirthdate"
