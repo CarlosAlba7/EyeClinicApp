@@ -62,5 +62,5 @@ Step 3: Start the frontend by using 'npm start' in the terminal
 4. Deployment
 
 🙌 Credits  
-Developed by: Tuan Kiet Pham, Carlos Alba, Zoe Webb
+Developed by: Tuan Kiet Pham, Carlos Alba, Zoe Webb  
 Technologies: React, Node.js, Express, MySQL, JWT, Vercel, Railway
