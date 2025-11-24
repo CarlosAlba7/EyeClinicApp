@@ -52,8 +52,6 @@ Step 4: Import MySQL database
 - Run the script
 - Ensure the database name matches DB_NAME
 Step 5: Start the backend by using 'npm start' in the terminal
-If successful, you will see something like this:
-<img width="388" height="102" alt="image" src="https://github.com/user-attachments/assets/fe0dd18c-da68-4196-a1bf-b7eb52e40139" />
 ```
 3. Frontend Setup
 ```md
@@ -63,6 +61,6 @@ Step 3: Start the frontend by using 'npm start' in the terminal
 ```
 4. Deployment
 
-🙌 Credits
+🙌 Credits  
 Developed by: Tuan Kiet Pham, Carlos Alba, Zoe Webb
 Technologies: React, Node.js, Express, MySQL, JWT, Vercel, Railway
