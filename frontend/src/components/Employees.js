@@ -324,7 +324,7 @@ const Employees = ({ user }) => {
                 />
               </div>
               <div className="form-group">
-                <label>Birthdate</label>
+                <label>Date of Birth</label>
                 <input
                   type="date"
                   name="birthdate"
