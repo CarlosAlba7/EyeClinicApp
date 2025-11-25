@@ -1,28 +1,26 @@
-📘Eye Clinic Management System
+Eye Clinic Management System
 A full-stack web application for managing an eye clinic, including patient accounts, booking appointments, shop purchases, alerts, employee management, and generating reports.
-
-🚀 Features 
   
-🙍‍♂️ / 🙍‍♀️ Patient Portal
+Patient Portal
 - Sign up & login  
 - Book and view appointments  
 - View doctors  
 - Edit profile  
 - Shop for eye care products
 
-👩‍⚕️ Doctor Portal
+Doctor Portal
 - View assigned appointments
 - Edit appointments'information
 - Respond to Emergency appointments
 - View patients's information
 
-☎️ Receptionist Portal
+Receptionist Portal
 - Manage appointments
 - View Patients'information
 - Low-stock alerts
 - Shop Management
 
-🧑‍💼 Admin Portal
+Admin Portal
 - Full employee management
 - Appointment management
 - Patient management
@@ -30,7 +28,7 @@ A full-stack web application for managing an eye clinic, including patient accou
 - Low-stock alerts
 - Generate reports
 
-🛠️ Installation Instructions
+Installation Instructions
 1. Required Technologies
 - Node.js
 - MySQL Workbench
@@ -62,6 +60,6 @@ Step 3: Start the frontend by using 'npm start' in the terminal
 ```
 4. Deployment
 
-🙌 Credits  
+Credits  
 Developed by: Tuan Kiet Pham, Carlos Alba, Zoe Webb  
 Technologies: React, Node.js, Express, MySQL, JWT, Vercel, Railway
