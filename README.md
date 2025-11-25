@@ -33,6 +33,7 @@ Installation Instructions
 - Node.js
 - MySQL Workbench
 - npm (come with Node)
+- IDE of Choice(we use VS code)
 2. Backend Setup
 ```md
 Step 1: Navigate to the Backend folder
