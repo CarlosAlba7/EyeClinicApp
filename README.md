@@ -39,25 +39,26 @@ Installation Instructions
 Step 1: Navigate to the Backend folder
 Step 2: Install dependencies using 'npm install' in the terminal
 Step 3: Create a '.env' file inside '/backend'
-DB_HOST=localhost
+DB_HOST=your localhost
 DB_USER=root
-DB_PASSWORD=your_password
+DB_PASSWORD=your password
 DB_NAME=eyeclinic
-JWT_SECRET=your_secret_key
+JWT_SECRET=your_jwt_secret_key_here_change_this_in_production
 PORT=5000
 Step 4: Import MySQL database
 - Open MySQL Workbench
-- Go to File → Open SQL Script
+- Go to File
+- Open SQL Script
 - Select the database.sql
 - Run the script
 - Ensure the database name matches DB_NAME
-Step 5: Start the backend by using 'npm start' in the terminal
+Step 5: Start the backend by using 'npm start' in the terminal powershell for that specific folder
 ```
 3. Frontend Setup
 ```md
 Step 1: Navigate to the Frontend folder
-Step 2: Install dependencies using 'npm install' in the terminal
-Step 3: Start the frontend by using 'npm start' in the terminal
+Step 2: Install dependencies using 'npm install' in the terminal powershell for that specific folder
+Step 3: Start the frontend by using 'npm start' in the terminal powershell for that specific folder
 ```
 4. Deployment
 
